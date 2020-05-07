@@ -45,7 +45,7 @@ pub mod utils;
 #[macro_use]
 pub mod wrapper;
 
-pub mod intellisense;
+// pub mod intellisense;
 
 pub use crate::ffi::*;
 pub use crate::utils::compile_hlsl;

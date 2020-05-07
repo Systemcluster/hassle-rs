@@ -2,7 +2,7 @@ use crate::intellisense::ffi::*;
 use crate::os::{BSTR, HRESULT, LPSTR};
 use crate::utils::HassleError;
 use crate::wrapper::Dxc;
-use com_rs::ComPtr;
+use com::ComPtr;
 use std::ffi::CString;
 
 #[derive(Debug)]

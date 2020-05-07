@@ -8,7 +8,7 @@ mod os_defs {
 
 #[cfg(not(windows))]
 mod os_defs {
-    pub type CHAR = i8;
+    pub type CHAR = std::os::raw::c_char;
     pub type WCHAR = u32;
     pub type OLECHAR = WCHAR;
     pub type LPSTR = *mut CHAR;
