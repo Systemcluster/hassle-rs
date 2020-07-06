@@ -1,7 +1,7 @@
 use crate::os::{BSTR, HRESULT, LPCSTR, LPSTR};
 pub(crate) use crate::unknown::IDxcUnknownShim;
 use bitflags::bitflags;
-use com::{com_interface, iid, IUnknown};
+use com::{com_interface, ComPtr, IID};
 
 bitflags! {
     pub struct DxcGlobalOptions : u32 {
@@ -132,16 +132,16 @@ bitflags! {
 
 bitflags! {
     pub struct DxcCursorKindFlags : u32 {
-       const NONE = 0;
-       const DECLARATION = 0x1;
-       const REFERENCE = 0x2;
-       const EXPRESSION = 0x4;
-       const STATEMENT = 0x8;
-       const ATTRIBUTE = 0x10;
-       const INVALID = 0x20;
-       const TRANSLATION_UNIT = 0x40;
-       const PREPROCESSING = 0x80;
-       const UNEXPOSED = 0x100;
+        const NONE = 0;
+        const DECLARATION = 0x1;
+        const REFERENCE = 0x2;
+        const EXPRESSION = 0x4;
+        const STATEMENT = 0x8;
+        const ATTRIBUTE = 0x10;
+        const INVALID = 0x20;
+        const TRANSLATION_UNIT = 0x40;
+        const PREPROCESSING = 0x80;
+        const UNEXPOSED = 0x100;
     }
 }
 
@@ -357,184 +357,269 @@ bitflags! {
     }
 }
 
-iid!(pub IID_IDxcDiagnostic = 0x4f76b234, 0x3659, 0x4d33, 0x99, 0xb0, 0x3b, 0x0d, 0xb9, 0x94, 0xb5, 0x64);
-com_interface! {
-    interface IDxcDiagnostic: IDxcUnknownShim, IUnknown {
-        iid: IID_IDxcDiagnostic,
-        vtable: IDxcDiagnosticVtbl,
-        fn format_diagnostic(options: DxcDiagnosticDisplayOptions, result: *mut LPSTR) -> HRESULT;
-        fn get_severity(result: *mut DxcDiagnosticSeverity) -> HRESULT;
-        fn get_location(result: *mut *mut IDxcSourceLocation) -> HRESULT;
-        fn get_spelling(result: *mut LPSTR) -> HRESULT;
-        fn get_category_text(result: *mut LPSTR) -> HRESULT;
-        fn get_num_ranges(result: *mut u32) -> HRESULT;
-        fn get_range_at(index: u32, result: *mut *mut IDxcSourceRange) -> HRESULT;
-        fn get_num_fix_its(result: *mut u32) -> HRESULT;
-        fn get_fix_it_at(index: u32, replacement_range: *mut *mut IDxcSourceRange, text: *mut LPSTR) -> HRESULT;
-    }
+#[com_interface("4f76b234-3659-4d33-99b0-3b0db994b564")]
+pub trait IDxcDiagnostic: IDxcUnknownShim {
+    unsafe fn format_diagnostic(
+        &self,
+        options: DxcDiagnosticDisplayOptions,
+        result: *mut LPSTR,
+    ) -> HRESULT;
+    unsafe fn get_severity(&self, result: *mut DxcDiagnosticSeverity) -> HRESULT;
+    unsafe fn get_location(&self, result: *mut Option<ComPtr<dyn IDxcSourceLocation>>) -> HRESULT;
+    unsafe fn get_spelling(&self, result: *mut LPSTR) -> HRESULT;
+    unsafe fn get_category_text(&self, result: *mut LPSTR) -> HRESULT;
+    unsafe fn get_num_ranges(&self, result: *mut u32) -> HRESULT;
+    unsafe fn get_range_at(
+        &self,
+        index: u32,
+        result: *mut Option<ComPtr<dyn IDxcSourceRange>>,
+    ) -> HRESULT;
+    unsafe fn get_num_fix_its(&self, result: *mut u32) -> HRESULT;
+    unsafe fn get_fix_it_at(
+        &self,
+        index: u32,
+        replacement_range: *mut Option<ComPtr<dyn IDxcSourceRange>>,
+        text: *mut LPSTR,
+    ) -> HRESULT;
 }
 
-iid!(pub IID_IDxcInclusion = 0x0c364d65, 0xdf44, 0x4412, 0x88, 0x8e, 0x4e, 0x55, 0x2f, 0xc5, 0xe3, 0xd6);
-com_interface! {
-    interface IDxcInclusion: IDxcUnknownShim, IUnknown {
-        iid: IID_IDxcInclusion,
-        vtable: IDxcInclusionVtbl,
-        fn get_included_file(result: *mut *mut IDxcFile) -> HRESULT;
-        fn get_stack_length(result: *mut u32) -> HRESULT;
-        fn get_stack_item(index: u32, result: *mut *mut IDxcSourceLocation) -> HRESULT;
-    }
+#[com_interface("0c364d65-df44-4412-888e-4e552fc5e3d6")]
+pub trait IDxcInclusion: IDxcUnknownShim {
+    unsafe fn get_included_file(&self, result: *mut Option<ComPtr<dyn IDxcFile>>) -> HRESULT;
+    unsafe fn get_stack_length(&self, result: *mut u32) -> HRESULT;
+    unsafe fn get_stack_item(
+        &self,
+        index: u32,
+        result: *mut Option<ComPtr<dyn IDxcSourceLocation>>,
+    ) -> HRESULT;
 }
 
-iid!(pub IID_IDxcToken = 0x7f90b9ff, 0xa275, 0x4932, 0x97, 0xd8, 0x3c, 0xfd, 0x23, 0x44, 0x82, 0xa2);
-com_interface! {
-    interface IDxcToken: IDxcUnknownShim, IUnknown {
-        iid: IID_IDxcToken,
-        vtable: IDxcTokenVtbl,
-        fn get_kind(value: *mut DxcTokenKind) -> HRESULT;
-        fn get_location(value: *mut *mut IDxcSourceLocation) -> HRESULT;
-        fn get_extent(value: *mut *mut IDxcSourceRange) -> HRESULT;
-        fn get_spelling(value: *mut LPSTR) -> HRESULT;
-    }
+#[com_interface("7f90b9ff-a275-4932-97d8-3cfd234482a2")]
+pub trait IDxcToken: IDxcUnknownShim {
+    unsafe fn get_kind(&self, value: *mut DxcTokenKind) -> HRESULT;
+    unsafe fn get_location(&self, value: *mut Option<ComPtr<dyn IDxcSourceLocation>>) -> HRESULT;
+    unsafe fn get_extent(&self, value: *mut Option<ComPtr<dyn IDxcSourceRange>>) -> HRESULT;
+    unsafe fn get_spelling(&self, value: *mut LPSTR) -> HRESULT;
 }
 
-iid!(pub IID_IDxcType = 0x2ec912fd, 0xb144, 0x4a15, 0xad, 0x0d, 0x1c, 0x54, 0x39, 0xc8, 0x1e, 0x46);
-com_interface! {
-    interface IDxcType: IDxcUnknownShim, IUnknown {
-        iid: IID_IDxcType,
-        vtable: IDxcTypeVtbl,
-        fn get_spelling(result: *mut LPSTR) -> HRESULT;
-        fn is_equal_to(other: *const IDxcType, result: *mut bool) -> HRESULT;
-        fn get_kind(result: *mut DxcTypeKind) -> HRESULT;
-    }
+#[com_interface("2ec912fd-b144-4a15-ad0d-1c5439c81e46")]
+pub trait IDxcType: IDxcUnknownShim {
+    unsafe fn get_spelling(&self, result: *mut LPSTR) -> HRESULT;
+    unsafe fn is_equal_to(&self, other: ComPtr<dyn IDxcType>, result: *mut bool) -> HRESULT;
+    unsafe fn get_kind(&self, result: *mut DxcCursorKind) -> HRESULT;
 }
 
-iid!(pub IID_IDxcSourceLocation = 0x8e7ddf1c, 0xd7d3, 0x4d69, 0xb2, 0x86, 0x85, 0xfc, 0xcb, 0xa1, 0xe0, 0xcf);
-com_interface! {
-    interface IDxcSourceLocation: IDxcUnknownShim, IUnknown {
-        iid: IID_IDxcSourceLocation,
-        vtable: IDxcSourceLocationVtbl,
-        fn is_equal_to(other: *const IDxcSourceLocation, result: *mut bool) -> HRESULT;
-        fn get_spelling_location(file: *mut *mut IDxcFile, line: *mut u32, col: *mut u32, offset: *mut u32) -> HRESULT;
-        fn is_null(result: *mut bool) -> HRESULT;
-    }
+#[com_interface("8e7ddf1c-d7d3-4d69-b286-85fccba1e0cf")]
+pub trait IDxcSourceLocation: IDxcUnknownShim {
+    unsafe fn is_equal_to(
+        &self,
+        other: ComPtr<dyn IDxcSourceLocation>,
+        result: *mut bool,
+    ) -> HRESULT;
+    unsafe fn get_spelling_location(
+        &self,
+        file: *mut Option<ComPtr<dyn IDxcFile>>,
+        line: *mut u32,
+        col: *mut u32,
+        offset: *mut u32,
+    ) -> HRESULT;
+    unsafe fn is_null(&self, result: *mut bool) -> HRESULT;
 }
 
-iid!(pub IID_IDxcSourceRange = 0xf1359b36, 0xa53f, 0x4e81, 0xb5, 0x14, 0xb6, 0xb8, 0x41, 0x22, 0xa1, 0x3f);
-com_interface! {
-    interface IDxcSourceRange: IDxcUnknownShim, IUnknown {
-        iid: IID_IDxcSourceRange,
-        vtable: IDxcSourceRangeVtbl,
-        fn is_null(value: *mut bool) -> HRESULT;
-        fn get_start(value: *mut *mut IDxcSourceLocation) -> HRESULT;
-        fn get_end(value: *mut *mut IDxcSourceLocation) -> HRESULT;
-        fn get_offsets(start_offset: *mut u32, end_offset: *mut u32) -> HRESULT;
-    }
+#[com_interface("f1359b36-a53f-4e81-b514-b6b84122a13f")]
+pub trait IDxcSourceRange: IDxcUnknownShim {
+    unsafe fn is_null(&self, value: *mut bool) -> HRESULT;
+    unsafe fn get_start(&self, value: *mut Option<ComPtr<dyn IDxcSourceLocation>>) -> HRESULT;
+    unsafe fn get_end(&self, value: *mut Option<ComPtr<dyn IDxcSourceLocation>>) -> HRESULT;
+    unsafe fn get_offsets(&self, start_offset: *mut u32, end_offset: *mut u32) -> HRESULT;
 }
 
-iid!(pub IID_IDxcCursor = 0x1467b985, 0x288d, 0x4d2a, 0x80, 0xc1, 0xef, 0x89, 0xc4, 0x2c, 0x40, 0xbc);
-com_interface! {
-    interface IDxcCursor: IDxcUnknownShim, IUnknown {
-        iid: IID_IDxcCursor,
-        vtable: IDxcCursorVtbl,
-        fn get_extent(range: *mut *mut IDxcSourceRange) -> HRESULT;
-        fn get_location(result: *mut *mut IDxcSourceLocation) -> HRESULT;
-        fn get_kind(result: *mut DxcCursorKind) -> HRESULT;
-        fn get_kind_flags(result: *mut DxcCursorKindFlags) -> HRESULT;
-        fn get_semantic_parent(result: *mut*mut IDxcCursor) -> HRESULT;
-        fn get_lexical_parent(result:*mut*mut IDxcCursor) -> HRESULT;
-        fn get_cursor_type(result:*mut*mut IDxcType) -> HRESULT;
-        fn get_num_arguments(result:*mut i32) -> HRESULT;
-        fn get_argument_at(index: i32, result: *mut *mut IDxcCursor) -> HRESULT;
-        fn get_referenced_cursor(result:*mut *mut IDxcCursor) -> HRESULT;
-        fn get_definition_cursor(result:*mut *mut IDxcCursor) -> HRESULT;
-        fn find_references_in_file(file: *const IDxcFile, skip: u32, top:u32, result_length: *mut u32, result: *mut *mut *mut IDxcCursor) -> HRESULT;
-        fn get_spelling(result: *mut LPSTR) -> HRESULT;
-        fn is_equal_to(other: *const IDxcCursor, result:*mut bool) -> HRESULT;
-        fn is_null(result:*mut bool) -> HRESULT;
-        fn is_definition(result:*mut bool) -> HRESULT;
-        fn get_display_name(result:*mut BSTR) -> HRESULT;
-        fn get_qualified_name(include_template_args:bool, result:*mut BSTR) -> HRESULT;
-        fn get_formatted_name(formatting: DxcCursorFormatting, result:*mut BSTR) -> HRESULT;
-        fn get_children(skip: u32, top: u32, result_length:*mut u32, result:*mut*mut*mut IDxcCursor) -> HRESULT;
-        fn get_snapped_child(location:  *const IDxcSourceLocation, result:*mut*mut IDxcCursor) -> HRESULT;
-    }
+#[com_interface("1467b985-288d-4d2a-80c1-ef89c42c40bc")]
+pub trait IDxcCursor: IDxcUnknownShim {
+    unsafe fn get_extent(&self, range: *mut Option<ComPtr<dyn IDxcSourceRange>>) -> HRESULT;
+    unsafe fn get_location(&self, result: *mut Option<ComPtr<dyn IDxcSourceLocation>>) -> HRESULT;
+    unsafe fn get_kind(&self, result: *mut DxcCursorKind) -> HRESULT;
+    unsafe fn get_kind_flags(&self, result: *mut DxcCursorKindFlags) -> HRESULT;
+    unsafe fn get_semantic_parent(&self, result: *mut Option<ComPtr<dyn IDxcCursor>>) -> HRESULT;
+    unsafe fn get_lexical_parent(&self, result: *mut Option<ComPtr<dyn IDxcCursor>>) -> HRESULT;
+    unsafe fn get_cursor_type(&self, result: *mut Option<ComPtr<dyn IDxcType>>) -> HRESULT;
+    unsafe fn get_num_arguments(&self, result: *mut i32) -> HRESULT;
+    unsafe fn get_argument_at(
+        &self,
+        index: i32,
+        result: *mut Option<ComPtr<dyn IDxcCursor>>,
+    ) -> HRESULT;
+    unsafe fn get_referenced_cursor(&self, result: *mut Option<ComPtr<dyn IDxcCursor>>) -> HRESULT;
+    unsafe fn get_definition_cursor(&self, result: *mut Option<ComPtr<dyn IDxcCursor>>) -> HRESULT;
+    unsafe fn find_references_in_file(
+        &self,
+        file: ComPtr<dyn IDxcFile>,
+        skip: u32,
+        top: u32,
+        result_length: *mut u32,
+        // TODO: Result value might not return nullptrs??
+        result: *mut *mut Option<ComPtr<dyn IDxcCursor>>,
+    ) -> HRESULT;
+    unsafe fn get_spelling(&self, result: *mut LPSTR) -> HRESULT;
+    unsafe fn is_equal_to(&self, other: ComPtr<dyn IDxcCursor>, result: *mut bool) -> HRESULT;
+    unsafe fn is_null(&self, result: *mut bool) -> HRESULT;
+    unsafe fn is_definition(&self, result: *mut bool) -> HRESULT;
+    unsafe fn get_display_name(&self, result: *mut BSTR) -> HRESULT;
+    unsafe fn get_qualified_name(&self, include_template_args: bool, result: *mut BSTR) -> HRESULT;
+    unsafe fn get_formatted_name(
+        &self,
+        formatting: DxcCursorFormatting,
+        result: *mut BSTR,
+    ) -> HRESULT;
+    unsafe fn get_children(
+        &self,
+        skip: u32,
+        top: u32,
+        result_length: *mut u32,
+        // TODO: Result value might not return nullptrs??
+        result: *mut *mut Option<ComPtr<dyn IDxcCursor>>,
+    ) -> HRESULT;
+    unsafe fn get_snapped_child(
+        &self,
+        location: ComPtr<dyn IDxcSourceLocation>,
+        result: *mut Option<ComPtr<dyn IDxcCursor>>,
+    ) -> HRESULT;
 }
 
-iid!(pub IID_IDxcUnsavedFile = 0x8ec00f98, 0x07d0, 0x4e60, 0x9d, 0x7c, 0x5a, 0x50, 0xb5, 0xb0, 0x01, 0x7f);
-com_interface! {
-    interface IDxcUnsavedFile: IDxcUnknownShim, IUnknown {
-        iid: IID_IDxcUnsavedFile,
-        vtable: IDxcUnsavedFileVtbl,
-        fn get_file_name(file_name: *mut LPSTR) -> HRESULT;
-        fn get_contents(contents: *mut LPSTR) -> HRESULT;
-        fn get_length(lenth : *mut u32) -> HRESULT;
-    }
+#[com_interface("8ec00f98-07d0-4e60-9d7c-5a50b5b0017f")]
+pub trait IDxcUnsavedFile: IDxcUnknownShim {
+    unsafe fn get_file_name(&self, file_name: *mut LPSTR) -> HRESULT;
+    unsafe fn get_contents(&self, contents: *mut LPSTR) -> HRESULT;
+    unsafe fn get_length(&self, lenth: *mut u32) -> HRESULT;
 }
 
-iid!(pub IID_IDxcFile = 0xbb2fca9e, 0x1478, 0x47ba, 0xb0, 0x8c, 0x2c, 0x50, 0x2a, 0xda, 0x48, 0x95);
-com_interface! {
-    interface IDxcFile: IDxcUnknownShim, IUnknown {
-        iid: IID_IDxcFile,
-        vtable: IDxcFileVtbl,
-        fn get_name(result: *mut LPSTR) -> HRESULT;
-        fn is_equal_to(other : *const IDxcFile, result: *mut bool) -> HRESULT;
-    }
+#[com_interface("bb2fca9e-1478-47ba-b08c-2c502ada4895")]
+pub trait IDxcFile: IDxcUnknownShim {
+    unsafe fn get_name(&self, result: *mut LPSTR) -> HRESULT;
+    unsafe fn is_equal_to(&self, other: ComPtr<dyn IDxcFile>, result: *mut bool) -> HRESULT;
 }
 
-iid!(pub IID_IDxcTranslationUnit = 0x9677dee0, 0xc0e5, 0x46a1, 0x8b, 0x40, 0x3d, 0xb3, 0x16, 0x8b, 0xe6, 0x3d);
-com_interface! {
-    interface IDxcTranslationUnit: IDxcUnknownShim, IUnknown {
-        iid: IID_IDxcTranslationUnit,
-        vtable: IDxcTranslationUnitVtbl,
-        fn get_cursor(cursor: *mut *mut IDxcCursor) -> HRESULT;
-        fn tokenize(range: *const IDxcSourceRange, tokens: *mut *mut *mut IDxcToken, token_count: *mut u32) -> HRESULT;
-        fn get_location( file: *mut IDxcFile, line: u32, column: u32, result: *mut *mut IDxcSourceLocation) -> HRESULT;
-        fn get_num_diagnostics(value : *mut u32) -> HRESULT;
-        fn get_diagnostic(index: u32, value: *mut *mut IDxcDiagnostic) -> HRESULT;
-        fn get_file(name : *const u8, result : *mut *mut IDxcFile) -> HRESULT;
-        fn get_file_name(result : *mut LPSTR) -> HRESULT;
-        fn reparse(unsaved_files : *mut *mut IDxcUnsavedFile, num_unsaved_files: u32) -> HRESULT;
-        fn get_cursor_for_location(location: *const IDxcSourceLocation, result : *mut *mut IDxcCursor) -> HRESULT;
-        fn get_location_for_offset(file : *const IDxcFile, offset: u32, result: *mut *mut IDxcSourceLocation) -> HRESULT;
-        fn get_skipped_ranges(file: *const IDxcFile, result_count: *mut u32, result: *mut *mut *mut IDxcSourceRange) -> HRESULT;
-        fn get_diagnostic_details(
-            index: u32,  options: DxcDiagnosticDisplayOptions, error_code: *mut u32, error_line: *mut u32, error_column: *mut u32,
-            error_file: *mut BSTR, error_offset: *mut u32, error_length: *mut u32, error_message: *mut BSTR) -> HRESULT;
-        fn get_inclusion_list(result_count: *mut u32, result: *mut *mut *mut IDxcInclusion) -> HRESULT;
-    }
+#[com_interface("9677dee0-c0e5-46a1-8b40-3db3168be63d")]
+pub trait IDxcTranslationUnit: IDxcUnknownShim {
+    unsafe fn get_cursor(&self, cursor: *mut Option<ComPtr<dyn IDxcCursor>>) -> HRESULT;
+    unsafe fn tokenize(
+        &self,
+        range: ComPtr<dyn IDxcSourceRange>,
+        // TODO: Result value might not return nullptrs??
+        tokens: *mut *mut Option<ComPtr<dyn IDxcToken>>,
+        token_count: *mut u32,
+    ) -> HRESULT;
+    unsafe fn get_location(
+        &self,
+        file: ComPtr<dyn IDxcFile>,
+        line: u32,
+        column: u32,
+        result: *mut Option<ComPtr<dyn IDxcSourceLocation>>,
+    ) -> HRESULT;
+    unsafe fn get_num_diagnostics(&self, value: *mut u32) -> HRESULT;
+    unsafe fn get_diagnostic(
+        &self,
+        index: u32,
+        value: *mut Option<ComPtr<dyn IDxcDiagnostic>>,
+    ) -> HRESULT;
+    unsafe fn get_file(
+        &self,
+        name: *const u8,
+        result: *mut Option<ComPtr<dyn IDxcFile>>,
+    ) -> HRESULT;
+    unsafe fn get_file_name(&self, result: *mut LPSTR) -> HRESULT;
+    unsafe fn reparse(
+        &self,
+        unsaved_files: *mut Option<ComPtr<dyn IDxcUnsavedFile>>,
+        num_unsaved_files: u32,
+    ) -> HRESULT;
+    unsafe fn get_cursor_for_location(
+        &self,
+        location: ComPtr<dyn IDxcSourceLocation>,
+        result: *mut Option<ComPtr<dyn IDxcCursor>>,
+    ) -> HRESULT;
+    unsafe fn get_location_for_offset(
+        &self,
+        file: ComPtr<dyn IDxcFile>,
+        offset: u32,
+        result: *mut Option<ComPtr<dyn IDxcSourceLocation>>,
+    ) -> HRESULT;
+    unsafe fn get_skipped_ranges(
+        &self,
+        file: ComPtr<dyn IDxcFile>,
+        result_count: *mut u32,
+        // TODO: Result value might not return nullptrs??
+        result: *mut *mut Option<ComPtr<dyn IDxcSourceRange>>,
+    ) -> HRESULT;
+    unsafe fn get_diagnostic_details(
+        &self,
+        index: u32,
+        options: DxcDiagnosticDisplayOptions,
+        error_code: *mut u32,
+        error_line: *mut u32,
+        error_column: *mut u32,
+        error_file: *mut BSTR,
+        error_offset: *mut u32,
+        error_length: *mut u32,
+        error_message: *mut BSTR,
+    ) -> HRESULT;
+    unsafe fn get_inclusion_list(
+        &self,
+        result_count: *mut u32,
+        // TODO: Result value might not return nullptrs??
+        result: *mut *mut Option<ComPtr<dyn IDxcInclusion>>,
+    ) -> HRESULT;
 }
 
-iid!(pub IID_IDxcIndex = 0x937824a0, 0x7f5a, 0x4815, 0x9b, 0xa, 0x7c, 0xc0, 0x42, 0x4f, 0x41, 0x73);
-com_interface! {
-    interface IDxcIndex: IDxcUnknownShim, IUnknown {
-        iid: IID_IDxcIndex,
-        vtable: IDxcIndexVtbl,
-        fn set_global_options(options: DxcGlobalOptions) -> HRESULT;
-        fn get_global_options(options: *mut DxcGlobalOptions) -> HRESULT;
-        fn parse_translation_unit(
-            source_filename: *const u8,
-            command_line_args: *const *const u8,
-            num_command_line_args: i32,
-            unsaved_files: *const *const IDxcUnsavedFile,
-            num_unsaved_files: u32,
-            options: DxcTranslationUnitFlags,
-            translation_unit: *mut *mut IDxcTranslationUnit) -> HRESULT;
-    }
+#[com_interface("937824a0-7f5a-4815-9b0a-7cc0424f4173")]
+pub trait IDxcIndex: IDxcUnknownShim {
+    unsafe fn set_global_options(&self, options: DxcGlobalOptions) -> HRESULT;
+    unsafe fn get_global_options(&self, options: *mut DxcGlobalOptions) -> HRESULT;
+    unsafe fn parse_translation_unit(
+        &self,
+        source_filename: *const u8,
+        command_line_args: *const *const u8,
+        num_command_line_args: i32,
+        // unsaved_files: *const *const dyn IDxcUnsavedFile,
+        unsaved_files: *const ComPtr<dyn IDxcUnsavedFile>,
+        num_unsaved_files: u32,
+        options: DxcTranslationUnitFlags,
+        translation_unit: *mut Option<ComPtr<dyn IDxcTranslationUnit>>,
+    ) -> HRESULT;
 }
 
-iid!(pub IID_IDxcIntelliSense = 0xb1f99513, 0x46d6, 0x4112, 0x81, 0x69, 0xdd, 0x0d, 0x60, 0x53, 0xf1, 0x7d);
-com_interface! {
-    interface IDxcIntelliSense: IDxcUnknownShim, IUnknown {
-        iid: IID_IDxcIntelliSense,
-        vtable: IDxcIntelliSenseVtbl,
-        fn create_index(index: *mut *mut IDxcIndex) -> HRESULT;
-        fn get_null_location(location: *mut *mut  IDxcSourceLocation)  -> HRESULT;
-        fn get_null_range(location: *mut *mut  IDxcSourceRange)  -> HRESULT;
-        fn get_range( start: *const IDxcSourceLocation, end: *const IDxcSourceLocation, location: *mut *mut IDxcSourceRange)  -> HRESULT;
-        fn get_default_diagnostic_display_options(value: *mut DxcDiagnosticDisplayOptions)  -> HRESULT;
-        fn get_default_editing_tu_options(value: *mut DxcTranslationUnitFlags)  -> HRESULT;
-        fn create_unsaved_file(file_name: LPCSTR, contents: LPCSTR, content_length: u32 , result: *mut *mut IDxcUnsavedFile)  -> HRESULT;
-    }
+#[com_interface("b1f99513-46d6-4112-8169-dd0d6053f17d")]
+pub trait IDxcIntelliSense: IDxcUnknownShim {
+    unsafe fn create_index(&self, index: *mut Option<ComPtr<dyn IDxcIndex>>) -> HRESULT;
+    unsafe fn get_null_location(
+        &self,
+        location: *mut Option<ComPtr<dyn IDxcSourceLocation>>,
+    ) -> HRESULT;
+    unsafe fn get_null_range(&self, location: *mut Option<ComPtr<dyn IDxcSourceRange>>) -> HRESULT;
+    unsafe fn get_range(
+        &self,
+        start: ComPtr<dyn IDxcSourceLocation>,
+        end: ComPtr<dyn IDxcSourceLocation>,
+        location: *mut Option<ComPtr<dyn IDxcSourceRange>>,
+    ) -> HRESULT;
+    unsafe fn get_default_diagnostic_display_options(
+        &self,
+        value: *mut DxcDiagnosticDisplayOptions,
+    ) -> HRESULT;
+    unsafe fn get_default_editing_tu_options(&self, value: *mut DxcTranslationUnitFlags)
+        -> HRESULT;
+    unsafe fn create_unsaved_file(
+        &self,
+        file_name: LPCSTR,
+        contents: LPCSTR,
+        content_length: u32,
+        result: *mut Option<ComPtr<dyn IDxcUnsavedFile>>,
+    ) -> HRESULT;
 }
 
-iid!(pub CLSID_DxcIntelliSense = 0x3047833c, 0xd1c0, 0x4b8e, 0x9d, 0x40, 0x10, 0x28, 0x78, 0x60, 0x59, 0x85);
+pub const CLSID_DxcIntelliSense: IID = IID {
+    data1: 0x3047833c,
+    data2: 0xd1c0,
+    data3: 0x4b8e,
+    data4: [0x9d, 0x40, 0x10, 0x28, 0x78, 0x60, 0x59, 0x85],
+};
