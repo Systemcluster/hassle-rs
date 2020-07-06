@@ -457,8 +457,7 @@ pub trait IDxcCursor: IDxcUnknownShim {
         skip: u32,
         top: u32,
         result_length: *mut u32,
-        // TODO: Result value might not return nullptrs??
-        result: *mut *mut Option<ComPtr<dyn IDxcCursor>>,
+        result: *mut *mut ComPtr<dyn IDxcCursor>,
     ) -> HRESULT;
     unsafe fn get_spelling(&self, result: *mut LPSTR) -> HRESULT;
     unsafe fn is_equal_to(&self, other: ComPtr<dyn IDxcCursor>, result: *mut bool) -> HRESULT;
@@ -476,8 +475,7 @@ pub trait IDxcCursor: IDxcUnknownShim {
         skip: u32,
         top: u32,
         result_length: *mut u32,
-        // TODO: Result value might not return nullptrs??
-        result: *mut *mut Option<ComPtr<dyn IDxcCursor>>,
+        result: *mut *mut ComPtr<dyn IDxcCursor>,
     ) -> HRESULT;
     unsafe fn get_snapped_child(
         &self,
@@ -505,8 +503,7 @@ pub trait IDxcTranslationUnit: IDxcUnknownShim {
     unsafe fn tokenize(
         &self,
         range: ComPtr<dyn IDxcSourceRange>,
-        // TODO: Result value might not return nullptrs??
-        tokens: *mut *mut Option<ComPtr<dyn IDxcToken>>,
+        tokens: *mut *mut ComPtr<dyn IDxcToken>,
         token_count: *mut u32,
     ) -> HRESULT;
     unsafe fn get_location(
@@ -548,8 +545,7 @@ pub trait IDxcTranslationUnit: IDxcUnknownShim {
         &self,
         file: ComPtr<dyn IDxcFile>,
         result_count: *mut u32,
-        // TODO: Result value might not return nullptrs??
-        result: *mut *mut Option<ComPtr<dyn IDxcSourceRange>>,
+        result: *mut *mut ComPtr<dyn IDxcSourceRange>,
     ) -> HRESULT;
     unsafe fn get_diagnostic_details(
         &self,
@@ -566,8 +562,7 @@ pub trait IDxcTranslationUnit: IDxcUnknownShim {
     unsafe fn get_inclusion_list(
         &self,
         result_count: *mut u32,
-        // TODO: Result value might not return nullptrs??
-        result: *mut *mut Option<ComPtr<dyn IDxcInclusion>>,
+        result: *mut *mut ComPtr<dyn IDxcInclusion>,
     ) -> HRESULT;
 }
 

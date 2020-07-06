@@ -167,7 +167,7 @@ impl DxcCursor {
     }
 
     pub fn get_children(&self, skip: u32, max_count: u32) -> Result<Vec<DxcCursor>, HRESULT> {
-        let mut result: *mut Option<ComPtr<dyn IDxcCursor>> = std::ptr::null_mut();
+        let mut result: *mut ComPtr<dyn IDxcCursor> = std::ptr::null_mut();
         let mut result_length: u32 = 0;
 
         return_hr!(
@@ -179,7 +179,7 @@ impl DxcCursor {
                 (0..result_length)
                     .map(|i| {
                         let child = unsafe { (*result.offset(i as isize)).clone() };
-                        DxcCursor::new(child.unwrap())
+                        DxcCursor::new(child)
                     })
                     .collect::<Vec<_>>()
             }
@@ -341,7 +341,7 @@ impl DxcCursor {
         skip: u32,
         top: u32,
     ) -> Result<Vec<DxcCursor>, HRESULT> {
-        let mut result: *mut Option<ComPtr<dyn IDxcCursor>> = std::ptr::null_mut();
+        let mut result: *mut ComPtr<dyn IDxcCursor> = std::ptr::null_mut();
         let mut result_length: u32 = 0;
 
         return_hr!(
@@ -358,7 +358,7 @@ impl DxcCursor {
                 (0..result_length)
                     .map(|i| {
                         let child = unsafe { (*result.offset(i as isize)).clone() };
-                        DxcCursor::new(child.unwrap())
+                        DxcCursor::new(child)
                     })
                     .collect::<Vec<_>>()
             }
