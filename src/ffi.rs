@@ -122,7 +122,7 @@ pub trait IDxcCompiler: IDxcUnknownShim {
         arg_count: u32,
         defines: *const DxcDefine,
         def_count: u32,
-        include_handler: *const dyn IDxcIncludeHandler,
+        include_handler: Option<ComPtr<dyn IDxcIncludeHandler>>,
         result: *mut Option<ComPtr<dyn IDxcOperationResult>>,
     ) -> HRESULT;
 
@@ -134,7 +134,7 @@ pub trait IDxcCompiler: IDxcUnknownShim {
         arg_count: u32,
         defines: *const DxcDefine,
         def_count: u32,
-        include_handler: *const dyn IDxcIncludeHandler,
+        include_handler: Option<ComPtr<dyn IDxcIncludeHandler>>,
         result: *mut Option<ComPtr<dyn IDxcOperationResult>>,
     ) -> HRESULT;
 
@@ -157,7 +157,7 @@ pub trait IDxcCompiler2: IDxcCompiler {
         arg_count: u32,
         defines: *const DxcDefine,
         def_count: u32,
-        include_handler: *const dyn IDxcIncludeHandler,
+        include_handler: Option<ComPtr<dyn IDxcIncludeHandler>>,
         result: *mut Option<ComPtr<dyn IDxcOperationResult>>,
         debug_blob_name: *mut LPWSTR,
         debug_blob: *mut Option<ComPtr<dyn IDxcBlob>>,

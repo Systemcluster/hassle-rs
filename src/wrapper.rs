@@ -261,7 +261,7 @@ impl DxcCompiler {
                 dxc_args.len() as u32,
                 dxc_defines.as_ptr(),
                 dxc_defines.len() as u32,
-                handler_wrapper.map_or_else(std::ptr::null, |v| Box::into_raw(v) as _),
+                handler_wrapper.map(|v| ComPtr::new(Box::into_raw(v) as _)),
                 &mut result,
             )
         };
@@ -314,7 +314,7 @@ impl DxcCompiler {
                 dxc_args.len() as u32,
                 dxc_defines.as_ptr(),
                 dxc_defines.len() as u32,
-                handler_wrapper.map_or_else(std::ptr::null, |v| Box::into_raw(v) as _),
+                handler_wrapper.map(|v| ComPtr::new(Box::into_raw(v) as _)),
                 &mut result,
                 &mut debug_filename,
                 &mut debug_blob,
@@ -366,7 +366,7 @@ impl DxcCompiler {
                 dxc_args.len() as u32,
                 dxc_defines.as_ptr(),
                 dxc_defines.len() as u32,
-                handler_wrapper.map_or_else(std::ptr::null, |v| Box::into_raw(v) as _),
+                handler_wrapper.map(|v| ComPtr::new(Box::into_raw(v) as _)),
                 &mut result,
             )
         };
