@@ -7,7 +7,7 @@
 use crate::ffi::*;
 use crate::os::{HRESULT, LPCWSTR, LPWSTR, WCHAR};
 use crate::utils::{from_wide, to_wide, HassleError};
-use com::Interface;
+use com::{class, Interface};
 use libloading::{Library, Symbol};
 use std::cell::RefCell;
 use std::convert::Into;
@@ -117,70 +117,98 @@ pub trait DxcIncludeHandler {
     fn load_source(&self, filename: String) -> Option<String>;
 }
 
-// #[co_class(implements(IDxcIncludeHandler))]
-pub struct DxcIncludeHandlerWrapper {
-    handler: Box<dyn DxcIncludeHandler>,
-    blobs: RefCell<Vec<DxcBlobEncoding>>,
-    pinned: RefCell<Vec<Rc<String>>>,
-    library: DxcLibrary,
+class! {
+    class DxcIncludeHandlerWrapper: IDxcIncludeHandler(IDxcUnknownShim) {
+        handler: Box<dyn DxcIncludeHandler>,
+        blobs: RefCell<Vec<DxcBlobEncoding>>,
+        pinned: RefCell<Vec<Rc<String>>>,
+        library: DxcLibrary,
+    }
+
+    impl IDxcUnknownShim for DxcIncludeHandlerWrapper {
+        fn complete_object_destructor(&self) -> HRESULT {
+            HRESULT(0)
+        }
+        fn deleting_destructor(&self) -> HRESULT {
+            HRESULT(0)
+        }
+    }
+
+    impl IDxcIncludeHandler for DxcIncludeHandlerWrapper {
+        fn load_source(
+            &self,
+            filename: LPCWSTR,
+            include_source: *mut Option<IDxcBlob>,
+        ) -> HRESULT {
+            let filename = crate::utils::from_wide(filename as *mut _);
+
+            let source = self.handler.load_source(filename);
+
+            if let Some(source) = source {
+                let pinned_source = Rc::new(source.clone());
+
+                let blob = self
+                    .library
+                    .create_blob_with_encoding_from_str(&*pinned_source)
+                    .unwrap();
+
+                unsafe { *include_source = blob.inner.get_interface::<IDxcBlob>() };
+                self.blobs.borrow_mut().push(blob);
+                self.pinned.borrow_mut().push(Rc::clone(&pinned_source));
+
+                // NOERROR
+                0
+            } else {
+                -2_147_024_894 // ERROR_FILE_NOT_FOUND / 0x80070002
+            }
+            .into()
+        }
+    }
+}
+
+impl Default for DxcIncludeHandlerWrapper {
+    // Required for com-rs, even if we never want it to create an instance for us.
+    fn default() -> Self {
+        unreachable!("Should never create an empty DxcIncludeHandlerWrapper")
+    }
 }
 
 impl DxcIncludeHandlerWrapper {
-    // Required for com-rs, even if we never want it to create an instance for us.
-    fn new() -> Box<Self> {
-        unreachable!("Should never create an empty DxcIncludeHandlerWrapper")
-    }
-
     fn create_include_handler(
         library: &DxcLibrary,
         include_handler: Box<dyn DxcIncludeHandler>,
-    ) -> Box<Self> {
-        Box::new(Self {
-            handler: include_handler,
-            blobs: RefCell::new(vec![]),
-            pinned: RefCell::new(vec![]),
-            library: library.clone(),
-        })
+    ) -> Self {
+        Self::new(
+            include_handler,
+            RefCell::new(vec![]),
+            RefCell::new(vec![]),
+            library.clone(),
+        )
     }
 
-    fn get_interface<T>(&self) -> Option<T> {
-        None
+    pub fn get_interface<I: Interface>(&self) -> Option<I> {
+        use com::sys::{E_NOINTERFACE, E_POINTER, FAILED};
+        use com::IID;
+        let mut ppv = None;
+        let hr = unsafe {
+            self.query_interface(
+                &I::IID as *const IID,
+                &mut ppv as *mut _ as *mut *mut c_void,
+            )
+        };
+        if FAILED(hr) {
+            assert!(
+                hr == E_NOINTERFACE || hr == E_POINTER,
+                "QueryInterface returned non-standard error"
+            );
+            return None;
+        }
+        debug_assert!(ppv.is_some());
+        ppv
     }
 }
 
-// TODO: Why is this not automatically understood from IDxcIncludeHandler: IDxcUnknownShim?
-// #[cfg(not(windows))]
-// impl IDxcUnknownShim for DxcIncludeHandlerWrapper {}
-
-// impl IDxcIncludeHandler for DxcIncludeHandlerWrapper {
-//     unsafe extern "stdcall" fn load_source(
-//         &self,
-//         filename: LPCWSTR,
-//         include_source: *mut Option<IDxcBlob>,
-//     ) -> HRESULT {
-//         let filename = crate::utils::from_wide(filename as *mut _);
-
-//         let source = self.handler.load_source(filename);
-
-//         if let Some(source) = source {
-//             let pinned_source = Rc::new(source.clone());
-
-//             let blob = self
-//                 .library
-//                 .create_blob_with_encoding_from_str(&*pinned_source)
-//                 .unwrap();
-
-//             *include_source = blob.inner.get_interface::<IDxcBlob>();
-//             self.blobs.borrow_mut().push(blob);
-//             self.pinned.borrow_mut().push(Rc::clone(&pinned_source));
-
-//             0
-//         } else {
-//             -2_147_024_894 // ERROR_FILE_NOT_FOUND / 0x80070002
-//         }
-//         .into()
-//     }
-// }
+// use com::sys::{HRESULT, NOERROR};
 
 // #[derive(Debug)]
 pub struct DxcCompiler {
@@ -227,7 +255,7 @@ impl DxcCompiler {
     fn prep_include_handler(
         library: &DxcLibrary,
         include_handler: Option<Box<dyn DxcIncludeHandler>>,
-    ) -> Option<Box<DxcIncludeHandlerWrapper>> {
+    ) -> Option<DxcIncludeHandlerWrapper> {
         include_handler.map(|include_handler| {
             DxcIncludeHandlerWrapper::create_include_handler(library, include_handler)
         })
@@ -252,6 +280,7 @@ impl DxcCompiler {
         Self::prep_defines(&defines, &mut wide_defines, &mut dxc_defines);
 
         let handler_wrapper = Self::prep_include_handler(&self.library, include_handler);
+        let h = handler_wrapper.map(|hnd| hnd.get_interface::<IDxcIncludeHandler>().unwrap()).unwrap();
 
         let mut result = None;
         let result_hr = unsafe {
@@ -264,7 +293,7 @@ impl DxcCompiler {
                 dxc_args.len() as u32,
                 dxc_defines.as_ptr(),
                 dxc_defines.len() as u32,
-                /* TODO */ None,
+                Some(h),
                 &mut result,
             )
         };
@@ -317,7 +346,7 @@ impl DxcCompiler {
                 dxc_args.len() as u32,
                 dxc_defines.as_ptr(),
                 dxc_defines.len() as u32,
-                /* TODO */ None,
+                handler_wrapper.map(|hnd| hnd.get_interface::<IDxcIncludeHandler>().unwrap()),
                 &mut result,
                 &mut debug_filename,
                 &mut debug_blob,
@@ -369,7 +398,7 @@ impl DxcCompiler {
                 dxc_args.len() as u32,
                 dxc_defines.as_ptr(),
                 dxc_defines.len() as u32,
-                /* TODO */ None,
+                handler_wrapper.map(|hnd| hnd.get_interface::<IDxcIncludeHandler>().unwrap()),
                 &mut result,
             )
         };

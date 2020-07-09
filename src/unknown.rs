@@ -35,5 +35,11 @@ interfaces! {
     }
 }
 
+// #[macro_use]
+// use com::co_class;
+// #[co_class(implements(IUnknownWithDtor))]
+// struct Test {}
+
+/// Forwards to IUnknown. No-op on Windows
 #[cfg(windows)]
 pub(crate) type IDxcUnknownShim = IUnknown;
