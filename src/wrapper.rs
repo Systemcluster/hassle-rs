@@ -7,7 +7,7 @@
 use crate::ffi::*;
 use crate::os::{HRESULT, LPCWSTR, LPWSTR, WCHAR};
 use crate::utils::{from_wide, to_wide, HassleError};
-use com::{co_class, ComPtr};
+use com::Interface;
 use libloading::{Library, Symbol};
 use std::cell::RefCell;
 use std::convert::Into;
@@ -40,11 +40,11 @@ macro_rules! return_hr_wrapped {
 
 // #[derive(Debug)]
 pub struct DxcBlob {
-    inner: ComPtr<dyn IDxcBlob>,
+    inner: IDxcBlob,
 }
 
 impl DxcBlob {
-    fn new(inner: ComPtr<dyn IDxcBlob>) -> Self {
+    fn new(inner: IDxcBlob) -> Self {
         Self { inner }
     }
 
@@ -65,11 +65,11 @@ impl DxcBlob {
 
 // #[derive(Debug)]
 pub struct DxcBlobEncoding {
-    inner: ComPtr<dyn IDxcBlobEncoding>,
+    inner: IDxcBlobEncoding,
 }
 
 impl DxcBlobEncoding {
-    fn new(inner: ComPtr<dyn IDxcBlobEncoding>) -> Self {
+    fn new(inner: IDxcBlobEncoding) -> Self {
         Self { inner }
     }
 }
@@ -77,17 +77,17 @@ impl DxcBlobEncoding {
 impl Into<DxcBlob> for DxcBlobEncoding {
     fn into(self) -> DxcBlob {
         // TODO: Refcounted ComRc!
-        DxcBlob::new(self.inner.get_interface::<dyn IDxcBlob>().unwrap())
+        DxcBlob::new(self.inner.get_interface::<IDxcBlob>().unwrap())
     }
 }
 
 // #[derive(Debug)]
 pub struct DxcOperationResult {
-    inner: ComPtr<dyn IDxcOperationResult>,
+    inner: IDxcOperationResult,
 }
 
 impl DxcOperationResult {
-    fn new(inner: ComPtr<dyn IDxcOperationResult>) -> Self {
+    fn new(inner: IDxcOperationResult) -> Self {
         Self { inner }
     }
 
@@ -117,7 +117,7 @@ pub trait DxcIncludeHandler {
     fn load_source(&self, filename: String) -> Option<String>;
 }
 
-#[co_class(implements(IDxcIncludeHandler))]
+// #[co_class(implements(IDxcIncludeHandler))]
 pub struct DxcIncludeHandlerWrapper {
     handler: Box<dyn DxcIncludeHandler>,
     blobs: RefCell<Vec<DxcBlobEncoding>>,
@@ -135,12 +135,12 @@ impl DxcIncludeHandlerWrapper {
         library: &DxcLibrary,
         include_handler: Box<dyn DxcIncludeHandler>,
     ) -> Box<Self> {
-        Self::allocate(
-            include_handler,
-            RefCell::new(vec![]),
-            RefCell::new(vec![]),
-            library.clone(),
-        )
+        Box::new(Self {
+            handler: include_handler,
+            blobs: RefCell::new(vec![]),
+            pinned: RefCell::new(vec![]),
+            library: library.clone(),
+        })
     }
 }
 
@@ -149,10 +149,10 @@ impl DxcIncludeHandlerWrapper {
 impl IDxcUnknownShim for DxcIncludeHandlerWrapper {}
 
 impl IDxcIncludeHandler for DxcIncludeHandlerWrapper {
-    unsafe fn load_source(
+    unsafe extern "stdcall" fn load_source(
         &self,
         filename: LPCWSTR,
-        include_source: *mut Option<ComPtr<dyn IDxcBlob>>,
+        include_source: *mut Option<IDxcBlob>,
     ) -> HRESULT {
         let filename = crate::utils::from_wide(filename as *mut _);
 
@@ -166,8 +166,7 @@ impl IDxcIncludeHandler for DxcIncludeHandlerWrapper {
                 .create_blob_with_encoding_from_str(&*pinned_source)
                 .unwrap();
 
-            // TODO: Find a better pointer cast
-            *include_source = Some(ComPtr::new(blob.inner.as_raw() as *mut *mut _));
+            *include_source = blob.inner.get_interface::<IDxcBlob>();
             self.blobs.borrow_mut().push(blob);
             self.pinned.borrow_mut().push(Rc::clone(&pinned_source));
 
@@ -181,12 +180,12 @@ impl IDxcIncludeHandler for DxcIncludeHandlerWrapper {
 
 // #[derive(Debug)]
 pub struct DxcCompiler {
-    inner: ComPtr<dyn IDxcCompiler2>,
+    inner: IDxcCompiler2,
     library: DxcLibrary,
 }
 
 impl DxcCompiler {
-    fn new(inner: ComPtr<dyn IDxcCompiler2>, library: DxcLibrary) -> Self {
+    fn new(inner: IDxcCompiler2, library: DxcLibrary) -> Self {
         Self { inner, library }
     }
 
@@ -253,7 +252,7 @@ impl DxcCompiler {
         let mut result = None;
         let result_hr = unsafe {
             self.inner.compile(
-                blob.inner.get_interface::<dyn IDxcBlob>().unwrap(),
+                blob.inner.get_interface::<IDxcBlob>().unwrap(),
                 to_wide(source_name).as_ptr(),
                 to_wide(entry_point).as_ptr(),
                 to_wide(target_profile).as_ptr(),
@@ -261,7 +260,7 @@ impl DxcCompiler {
                 dxc_args.len() as u32,
                 dxc_defines.as_ptr(),
                 dxc_defines.len() as u32,
-                handler_wrapper.map(|v| ComPtr::new(Box::into_raw(v) as _)),
+                /* TODO */ None,
                 &mut result,
             )
         };
@@ -306,7 +305,7 @@ impl DxcCompiler {
 
         let result_hr = unsafe {
             self.inner.compile_with_debug(
-                blob.inner.get_interface::<dyn IDxcBlob>().unwrap(),
+                blob.inner.get_interface::<IDxcBlob>().unwrap(),
                 to_wide(source_name).as_ptr(),
                 to_wide(entry_point).as_ptr(),
                 to_wide(target_profile).as_ptr(),
@@ -314,7 +313,7 @@ impl DxcCompiler {
                 dxc_args.len() as u32,
                 dxc_defines.as_ptr(),
                 dxc_defines.len() as u32,
-                handler_wrapper.map(|v| ComPtr::new(Box::into_raw(v) as _)),
+                /* TODO */ None,
                 &mut result,
                 &mut debug_filename,
                 &mut debug_blob,
@@ -360,13 +359,13 @@ impl DxcCompiler {
         let mut result = None;
         let result_hr = unsafe {
             self.inner.preprocess(
-                blob.inner.get_interface::<dyn IDxcBlob>().unwrap(),
+                blob.inner.get_interface::<IDxcBlob>().unwrap(),
                 to_wide(source_name).as_ptr(),
                 dxc_args.as_ptr(),
                 dxc_args.len() as u32,
                 dxc_defines.as_ptr(),
                 dxc_defines.len() as u32,
-                handler_wrapper.map(|v| ComPtr::new(Box::into_raw(v) as _)),
+                /* TODO */ None,
                 &mut result,
             )
         };
@@ -390,7 +389,7 @@ impl DxcCompiler {
         return_hr!(
             unsafe {
                 self.inner.disassemble(
-                    blob.inner.get_interface::<dyn IDxcBlob>().unwrap(),
+                    blob.inner.get_interface::<IDxcBlob>().unwrap(),
                     &mut result_blob,
                 )
             },
@@ -402,11 +401,11 @@ impl DxcCompiler {
 // // #[derive(Debug)]
 #[derive(Clone)]
 pub struct DxcLibrary {
-    inner: ComPtr<dyn IDxcLibrary>,
+    inner: IDxcLibrary,
 }
 
 impl DxcLibrary {
-    fn new(inner: ComPtr<dyn IDxcLibrary>) -> Self {
+    fn new(inner: IDxcLibrary) -> Self {
         Self { inner }
     }
 
@@ -450,7 +449,7 @@ impl DxcLibrary {
 
         unsafe {
             self.inner.get_blob_as_utf8(
-                blob.inner.get_interface::<dyn IDxcBlob>().unwrap(),
+                blob.inner.get_interface::<IDxcBlob>().unwrap(),
                 &mut blob_utf8,
             )
         };
@@ -499,9 +498,9 @@ impl Dxc {
         Ok(Self { dxc_lib })
     }
 
-    pub(crate) fn get_dxc_create_instance(
+    pub(crate) fn get_dxc_create_instance<T>(
         &self,
-    ) -> Result<Symbol<DxcCreateInstanceProc>, HassleError> {
+    ) -> Result<Symbol<DxcCreateInstanceProc<T>>, HassleError> {
         Ok(unsafe { self.dxc_lib.get(b"DxcCreateInstance\0")? })
     }
 
@@ -511,7 +510,8 @@ impl Dxc {
             self.get_dxc_create_instance()?(
                 &CLSID_DxcCompiler,
                 &IID_IDXC_COMPILER2,
-                &mut compiler as *mut _ as *mut *mut _,
+                // &IDxcCompiler2::IID,
+                &mut compiler, /*  as *mut _ as *mut *mut _ */
             ),
             DxcCompiler::new(
                 compiler.unwrap(),
@@ -526,8 +526,9 @@ impl Dxc {
         return_hr_wrapped!(
             self.get_dxc_create_instance()?(
                 &CLSID_DxcLibrary,
-                &IID_IDXC_LIBRARY,
-                &mut library as *mut _ as *mut *mut _
+                // &IID_IDXC_LIBRARY,
+                &IDxcLibrary::IID,
+                &mut library /*  as *mut _ as *mut *mut _ */
             ),
             DxcLibrary::new(library.unwrap())
         );
@@ -536,13 +537,13 @@ impl Dxc {
 
 // #[derive(Debug)]
 pub struct DxcValidator {
-    inner: ComPtr<dyn IDxcValidator>,
+    inner: IDxcValidator,
 }
 
 pub type DxcValidatorVersion = (u32, u32);
 
 impl DxcValidator {
-    fn new(inner: ComPtr<dyn IDxcValidator>) -> Self {
+    fn new(inner: IDxcValidator) -> Self {
         Self { inner }
     }
 
@@ -556,7 +557,7 @@ impl DxcValidator {
         //     )
         // };
 
-        // let version = unsafe { ComPtr::<dyn IDxcVersionInfo>::new(&mut version) };
+        // let version = unsafe { ComPtr::<IDxcVersionInfo>::new(&mut version) };
 
         // if result_hr != 0 {
         //     return Err(result_hr);
@@ -565,7 +566,7 @@ impl DxcValidator {
         // TODO: Keep above code to get HRESULT? Update get_interface to return a Result<>??
         let version = self
             .inner
-            .get_interface::<dyn IDxcVersionInfo>()
+            .get_interface::<IDxcVersionInfo>()
             .ok_or(HRESULT(com::sys::E_NOINTERFACE))?;
 
         let mut major = 0;
@@ -582,7 +583,7 @@ impl DxcValidator {
         let mut result = None;
         let result_hr = unsafe {
             self.inner.validate(
-                blob.inner.get_interface::<dyn IDxcBlob>().unwrap(),
+                blob.inner.get_interface::<IDxcBlob>().unwrap(),
                 DXC_VALIDATOR_FLAGS_IN_PLACE_EDIT,
                 &mut result,
             )
@@ -622,19 +623,20 @@ impl Dxil {
         }
     }
 
-    fn get_dxc_create_instance(&self) -> Result<Symbol<DxcCreateInstanceProc>, HassleError> {
+    fn get_dxc_create_instance<T>(&self) -> Result<Symbol<DxcCreateInstanceProc<T>>, HassleError> {
         Ok(unsafe { self.dxil_lib.get(b"DxcCreateInstance\0")? })
     }
 
     pub fn create_validator(&self) -> Result<DxcValidator, HassleError> {
-        let mut validator = std::ptr::null_mut();
+        let mut validator = None;
         return_hr_wrapped!(
             self.get_dxc_create_instance()?(
                 &CLSID_DxcValidator,
                 &IID_IDXC_VALIDATOR,
-                &mut validator as *mut _ as *mut *mut _,
+                // &mut validator as *mut _ as *mut *mut _,
+                &mut validator,
             ),
-            DxcValidator::new(unsafe { ComPtr::new(&mut validator) })
+            DxcValidator::new(validator.unwrap())
         );
     }
 }
