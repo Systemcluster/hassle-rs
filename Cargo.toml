@@ -25,7 +25,7 @@ default-target = "x86_64-pc-windows-msvc"
 
 [dependencies]
 libloading = "0.6.2"
-com = { git = "https://github.com/Traverse-Research/com-rs.git", rev = "dec103965fab047de39a4235df827fdb6706b778" } # "linux-compat"
+com = { path = "../com-rs" }
 bitflags = "1.2.1"
 widestring = "0.4.2"
 thiserror = "1.0"
