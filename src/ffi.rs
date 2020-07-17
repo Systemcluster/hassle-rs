@@ -19,46 +19,46 @@ pub type DxcCreateInstanceProc2 = extern "system" fn(
 interfaces! {
     #[uuid("8BA5FB08-5195-40e2-AC58-0D989C3A0102")]
     pub(crate) unsafe interface IDxcBlob: IDxcUnknownShim {
-        fn get_buffer_pointer(&self) -> *mut c_void;
-        fn get_buffer_size(&self) -> usize;
+        pub(crate) fn get_buffer_pointer(&self) -> *mut c_void;
+        pub(crate) fn get_buffer_size(&self) -> usize;
     }
 
     #[uuid("7241d424-2646-4191-97c0-98e96e42fc68")]
     pub(crate) unsafe interface IDxcBlobEncoding: IDxcBlob {
-        fn get_encoding(&self, known: *mut u32, code_page: *mut u32) -> HRESULT;
+        pub(crate) fn get_encoding(&self, known: *mut u32, code_page: *mut u32) -> HRESULT;
     }
 
     #[uuid("e5204dc7-d18c-4c3c-bdfb-851673980fe7")]
     pub(crate) unsafe interface IDxcLibrary: IDxcUnknownShim {
-        fn set_malloc(&self, malloc: *const c_void) -> HRESULT;
-        fn create_blob_from_blob(
+        pub(crate) fn set_malloc(&self, malloc: *const c_void) -> HRESULT;
+        pub(crate) fn create_blob_from_blob(
             &self,
             blob: IDxcBlob,
             offset: u32,
             length: u32,
             result_blob: *mut Option<IDxcBlob>,
         ) -> HRESULT;
-        fn create_blob_from_file(
+        pub(crate) fn create_blob_from_file(
             &self,
             filename: LPCWSTR,
             code_page: *const u32,
             blob_encoding: *mut Option<IDxcBlobEncoding>,
         ) -> HRESULT;
-        fn create_blob_with_encoding_from_pinned(
+        pub(crate) fn create_blob_with_encoding_from_pinned(
             &self,
             text: *const c_void,
             size: u32,
             code_page: u32,
             blob_encoding: *mut Option<IDxcBlobEncoding>,
         ) -> HRESULT;
-        fn create_blob_with_encoding_on_heap_copy(
+        pub(crate) fn create_blob_with_encoding_on_heap_copy(
             &self,
             text: *const c_void,
             size: u32,
             code_page: u32,
             blob_encoding: *mut Option<IDxcBlobEncoding>,
         ) -> HRESULT;
-        fn create_blob_with_encoding_on_malloc(
+        pub(crate) fn create_blob_with_encoding_on_malloc(
             &self,
             text: *const c_void,
             malloc: *const /* IMalloc */ c_void,
@@ -66,21 +66,21 @@ interfaces! {
             code_page: u32,
             blob_encoding: *mut Option<IDxcBlobEncoding>,
         ) -> HRESULT;
-        fn create_include_handler(
+        pub(crate) fn create_include_handler(
             &self,
             include_handler: *mut Option<IDxcIncludeHandler>,
         ) -> HRESULT;
-        fn create_stream_from_blob_read_only(
+        pub(crate) fn create_stream_from_blob_read_only(
             &self,
             blob: IDxcBlob,
             stream: *mut *mut /* IStream */ c_void,
         ) -> HRESULT;
-        fn get_blob_as_utf8(
+        pub(crate) fn get_blob_as_utf8(
             &self,
             blob: IDxcBlob,
             blob_encoding: *mut Option<IDxcBlobEncoding>,
         ) -> HRESULT;
-        fn get_blob_as_utf16(
+        pub(crate) fn get_blob_as_utf16(
             &self,
             blob: IDxcBlob,
             blob_encoding: *mut Option<IDxcBlobEncoding>,
@@ -89,15 +89,15 @@ interfaces! {
 
     #[uuid("CEDB484A-D4E9-445A-B991-CA21CA157DC2")]
     pub(crate) unsafe interface IDxcOperationResult: IDxcUnknownShim {
-        fn get_status(&self, status: *mut u32) -> HRESULT;
-        fn get_result(&self, result: *mut Option<IDxcBlob>) -> HRESULT;
-        fn get_error_buffer(&self, errors: *mut Option<IDxcBlobEncoding>)
+        pub(crate) fn get_status(&self, status: *mut u32) -> HRESULT;
+        pub(crate) fn get_result(&self, result: *mut Option<IDxcBlob>) -> HRESULT;
+        pub(crate) fn get_error_buffer(&self, errors: *mut Option<IDxcBlobEncoding>)
             -> HRESULT;
     }
 
     #[uuid("7f61fc7d-950d-467f-b3e3-3c02fb49187c")]
     pub(crate) unsafe interface IDxcIncludeHandler: IDxcUnknownShim {
-        fn load_source(
+        pub(crate) fn load_source(
             &self,
             filename: LPCWSTR,
             include_source: *mut Option<IDxcBlob>,
@@ -115,7 +115,7 @@ pub struct DxcDefine {
 interfaces! {
     #[uuid("8c210bf3-011f-4422-8d70-6f9acb8db617")]
     pub(crate) unsafe interface IDxcCompiler: IDxcUnknownShim {
-        fn compile(
+        pub(crate) fn compile(
             &self,
             blob: IDxcBlob,
             source_name: LPCWSTR,
@@ -129,7 +129,7 @@ interfaces! {
             result: *mut Option<IDxcOperationResult>,
         ) -> HRESULT;
 
-        fn preprocess(
+        pub(crate) fn preprocess(
             &self,
             blob: IDxcBlob,
             source_name: LPCWSTR,
@@ -141,7 +141,7 @@ interfaces! {
             result: *mut Option<IDxcOperationResult>,
         ) -> HRESULT;
 
-        fn disassemble(
+        pub(crate) fn disassemble(
             &self,
             blob: IDxcBlob,
             disassembly: *mut Option<IDxcBlobEncoding>,
@@ -150,7 +150,7 @@ interfaces! {
 
     #[uuid("A005A9D9-B8BB-4594-B5C9-0E633BEC4D37")]
     pub(crate) unsafe interface IDxcCompiler2: IDxcCompiler {
-        fn compile_with_debug(
+        pub(crate) fn compile_with_debug(
             &self,
             blob: IDxcBlob,
             source_name: LPCWSTR,
@@ -169,9 +169,9 @@ interfaces! {
 
     #[uuid("F1B5BE2A-62DD-4327-A1C2-42AC1E1E78E6")]
     pub(crate) unsafe interface IDxcLinker: IDxcUnknownShim {
-        fn register_library(&self, lib_name: LPCWSTR, lib: IDxcBlob) -> HRESULT;
+        pub(crate) fn register_library(&self, lib_name: LPCWSTR, lib: IDxcBlob) -> HRESULT;
 
-        fn link(
+        pub(crate) fn link(
             &self,
             entry_name: LPCWSTR,
             target_profile: LPCWSTR,
@@ -193,7 +193,7 @@ pub const DXC_VALIDATOR_FLAGS_VALID_MASK: u32 = 0x7;
 interfaces! {
     #[uuid("A6E82BD2-1FD7-4826-9811-2857E797F49A")]
     pub(crate) unsafe interface IDxcValidator: IDxcUnknownShim {
-        fn validate(
+        pub(crate) fn validate(
             &self,
             shader: IDxcBlob,
             flags: u32,
@@ -203,10 +203,10 @@ interfaces! {
 
     #[uuid("334b1f50-2292-4b35-99a1-25588d8c17fe")]
     pub(crate) unsafe interface IDxcContainerBuilder: IDxcUnknownShim {
-        fn load(&self, dxil_container_header: IDxcBlob) -> HRESULT;
-        fn add_part(&self, four_cc: u32, source: IDxcBlob) -> HRESULT;
-        fn remove_part(&self, four_cc: u32) -> HRESULT;
-        fn seralize_container(
+        pub(crate) fn load(&self, dxil_container_header: IDxcBlob) -> HRESULT;
+        pub(crate) fn add_part(&self, four_cc: u32, source: IDxcBlob) -> HRESULT;
+        pub(crate) fn remove_part(&self, four_cc: u32) -> HRESULT;
+        pub(crate) fn seralize_container(
             &self,
             result: *mut Option<IDxcOperationResult>,
         ) -> HRESULT;
@@ -214,7 +214,7 @@ interfaces! {
 
     #[uuid("091f7a26-1c1f-4948-904b-e6e3a8a771d5")]
     pub(crate) unsafe interface IDxcAssembler: IDxcUnknownShim {
-        fn assemble_to_container(
+        pub(crate) fn assemble_to_container(
             &self,
             shader: IDxcBlob,
             result: *mut Option<IDxcOperationResult>,
@@ -223,12 +223,12 @@ interfaces! {
 
     #[uuid("d2c21b26-8350-4bdc-976a-331ce6f4c54c")]
     pub(crate) unsafe interface IDxcContainerReflection: IDxcUnknownShim {
-        fn load(&self, container: IDxcBlob) -> HRESULT;
-        fn get_part_count(&self, result: *mut u32) -> HRESULT;
-        fn get_part_kind(&self, idx: u32, result: *mut u32) -> HRESULT;
-        fn get_part_content(&self, idx: u32, result: *mut Option<IDxcBlob>) -> HRESULT;
-        fn find_first_part_kind(&self, kind: u32, result: *mut u32) -> HRESULT;
-        fn get_part_reflection(
+        pub(crate) fn load(&self, container: IDxcBlob) -> HRESULT;
+        pub(crate) fn get_part_count(&self, result: *mut u32) -> HRESULT;
+        pub(crate) fn get_part_kind(&self, idx: u32, result: *mut u32) -> HRESULT;
+        pub(crate) fn get_part_content(&self, idx: u32, result: *mut Option<IDxcBlob>) -> HRESULT;
+        pub(crate) fn find_first_part_kind(&self, kind: u32, result: *mut u32) -> HRESULT;
+        pub(crate) fn get_part_reflection(
             &self,
             idx: u32,
             iid: *const IID,
@@ -238,22 +238,22 @@ interfaces! {
 
     #[uuid("AE2CD79F-CC22-453F-9B6B-B124E7A5204C")]
     pub(crate) unsafe interface IDxcOptimizerPass: IDxcUnknownShim {
-        fn get_option_name(&self, result: *mut LPWSTR) -> HRESULT;
-        fn get_description(&self, result: *mut LPWSTR) -> HRESULT;
-        fn get_option_arg_count(&self, count: *mut u32) -> HRESULT;
-        fn get_option_arg_name(&self, arg_idx: u32, result: *mut LPWSTR) -> HRESULT;
-        fn get_option_arg_description(&self, arg_idx: u32, result: *mut LPWSTR) -> HRESULT;
+        pub(crate) fn get_option_name(&self, result: *mut LPWSTR) -> HRESULT;
+        pub(crate) fn get_description(&self, result: *mut LPWSTR) -> HRESULT;
+        pub(crate) fn get_option_arg_count(&self, count: *mut u32) -> HRESULT;
+        pub(crate) fn get_option_arg_name(&self, arg_idx: u32, result: *mut LPWSTR) -> HRESULT;
+        pub(crate) fn get_option_arg_description(&self, arg_idx: u32, result: *mut LPWSTR) -> HRESULT;
     }
 
     #[uuid("25740E2E-9CBA-401B-9119-4FB42F39F270")]
     pub(crate) unsafe interface IDxcOptimizer: IDxcUnknownShim {
-        fn get_available_pass_count(&self, count: *mut u32) -> HRESULT;
-        fn get_available_pass(
+        pub(crate) fn get_available_pass_count(&self, count: *mut u32) -> HRESULT;
+        pub(crate) fn get_available_pass(
             &self,
             index: u32,
             result: *mut Option<IDxcOptimizerPass>,
         ) -> HRESULT;
-        fn run_optimizer(
+        pub(crate) fn run_optimizer(
             &self,
             blob: IDxcBlob,
             options: *const LPCWSTR,
@@ -271,13 +271,13 @@ pub const DXC_VERSION_INFO_FLAGS_INTERNAL: u32 = 2; // Internal Validator (non-s
 interfaces! {
     #[uuid("b04f5b50-2059-4f12-a8ff-a1e0cde1cc7e")]
     pub(crate) unsafe interface IDxcVersionInfo: IDxcUnknownShim {
-        fn get_version(&self, major: *mut u32, minor: *mut u32) -> HRESULT;
-        fn get_flags(&self, flags: *mut u32) -> HRESULT;
+        pub(crate) fn get_version(&self, major: *mut u32, minor: *mut u32) -> HRESULT;
+        pub(crate) fn get_flags(&self, flags: *mut u32) -> HRESULT;
     }
 
     #[uuid("fb6904c4-42f0-4b62-9c46-983af7da7c83")]
     pub(crate) unsafe interface IDxcVersionInfo2: IDxcUnknownShim {
-        fn get_commit_info(&self, commit_count: *mut u32, commit_hash: *mut *mut u8) -> HRESULT;
+        pub(crate) fn get_commit_info(&self, commit_count: *mut u32, commit_hash: *mut *mut u8) -> HRESULT;
 }
 }
 
