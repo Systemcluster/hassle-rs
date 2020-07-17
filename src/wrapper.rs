@@ -142,41 +142,45 @@ impl DxcIncludeHandlerWrapper {
             library: library.clone(),
         })
     }
+
+    fn get_interface<T>(&self) -> Option<T> {
+        None
+    }
 }
 
 // TODO: Why is this not automatically understood from IDxcIncludeHandler: IDxcUnknownShim?
 // #[cfg(not(windows))]
-impl IDxcUnknownShim for DxcIncludeHandlerWrapper {}
+// impl IDxcUnknownShim for DxcIncludeHandlerWrapper {}
 
-impl IDxcIncludeHandler for DxcIncludeHandlerWrapper {
-    unsafe extern "stdcall" fn load_source(
-        &self,
-        filename: LPCWSTR,
-        include_source: *mut Option<IDxcBlob>,
-    ) -> HRESULT {
-        let filename = crate::utils::from_wide(filename as *mut _);
+// impl IDxcIncludeHandler for DxcIncludeHandlerWrapper {
+//     unsafe extern "stdcall" fn load_source(
+//         &self,
+//         filename: LPCWSTR,
+//         include_source: *mut Option<IDxcBlob>,
+//     ) -> HRESULT {
+//         let filename = crate::utils::from_wide(filename as *mut _);
 
-        let source = self.handler.load_source(filename);
+//         let source = self.handler.load_source(filename);
 
-        if let Some(source) = source {
-            let pinned_source = Rc::new(source.clone());
+//         if let Some(source) = source {
+//             let pinned_source = Rc::new(source.clone());
 
-            let blob = self
-                .library
-                .create_blob_with_encoding_from_str(&*pinned_source)
-                .unwrap();
+//             let blob = self
+//                 .library
+//                 .create_blob_with_encoding_from_str(&*pinned_source)
+//                 .unwrap();
 
-            *include_source = blob.inner.get_interface::<IDxcBlob>();
-            self.blobs.borrow_mut().push(blob);
-            self.pinned.borrow_mut().push(Rc::clone(&pinned_source));
+//             *include_source = blob.inner.get_interface::<IDxcBlob>();
+//             self.blobs.borrow_mut().push(blob);
+//             self.pinned.borrow_mut().push(Rc::clone(&pinned_source));
 
-            0
-        } else {
-            -2_147_024_894 // ERROR_FILE_NOT_FOUND / 0x80070002
-        }
-        .into()
-    }
-}
+//             0
+//         } else {
+//             -2_147_024_894 // ERROR_FILE_NOT_FOUND / 0x80070002
+//         }
+//         .into()
+//     }
+// }
 
 // #[derive(Debug)]
 pub struct DxcCompiler {
