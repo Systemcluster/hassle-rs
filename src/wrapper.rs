@@ -605,21 +605,17 @@ pub struct Dxil {
 
 impl Dxil {
     pub fn new() -> Result<Self, HassleError> {
-        #[cfg(not(windows))]
-        {
+        if cfg!(windows) {
+            Library::new("dxil.dll")
+                .map_err(|e| HassleError::LoadLibraryError {
+                    filename: "dxil".to_string(),
+                    inner: e,
+                })
+                .map(|dxil_lib| Self { dxil_lib })
+        } else {
             Err(HassleError::WindowsOnly(
                 "DXIL Signing is only supported on windows at the moment".to_string(),
             ))
-        }
-
-        #[cfg(windows)]
-        {
-            let dxil_lib = Library::new("dxil.dll").map_err(|e| HassleError::LoadLibraryError {
-                filename: "dxil".to_string(),
-                inner: e,
-            })?;
-
-            Ok(Self { dxil_lib })
         }
     }
 
