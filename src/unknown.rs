@@ -42,4 +42,10 @@ interfaces! {
 
 /// Forwards to IUnknown. No-op on Windows
 #[cfg(windows)]
-pub(crate) type IDxcUnknownShim = IUnknown;
+// pub(crate) type IDxcUnknownShim = IUnknown;
+interfaces! {
+    // Steal the interface ID from IUnknown:
+    #[uuid("00000000-0000-0000-C000-000000000046")]
+    pub(crate) unsafe interface IDxcUnknownShim: IUnknown {
+    }
+}
