@@ -287,7 +287,7 @@ impl DxcCompiler {
         let mut result = None;
         let result_hr = unsafe {
             self.inner.compile(
-                blob.inner.get_interface::<IDxcBlob>().unwrap(),
+                &blob.inner,
                 to_wide(source_name).as_ptr(),
                 to_wide(entry_point).as_ptr(),
                 to_wide(target_profile).as_ptr(),
@@ -340,7 +340,7 @@ impl DxcCompiler {
 
         let result_hr = unsafe {
             self.inner.compile_with_debug(
-                blob.inner.get_interface::<IDxcBlob>().unwrap(),
+                &blob.inner,
                 to_wide(source_name).as_ptr(),
                 to_wide(entry_point).as_ptr(),
                 to_wide(target_profile).as_ptr(),
@@ -394,7 +394,7 @@ impl DxcCompiler {
         let mut result = None;
         let result_hr = unsafe {
             self.inner.preprocess(
-                blob.inner.get_interface::<IDxcBlob>().unwrap(),
+                &blob.inner,
                 to_wide(source_name).as_ptr(),
                 dxc_args.as_ptr(),
                 dxc_args.len() as u32,
@@ -422,12 +422,7 @@ impl DxcCompiler {
         let mut result_blob = None;
 
         return_hr!(
-            unsafe {
-                self.inner.disassemble(
-                    blob.inner.get_interface::<IDxcBlob>().unwrap(),
-                    &mut result_blob,
-                )
-            },
+            unsafe { self.inner.disassemble(&blob.inner, &mut result_blob,) },
             DxcBlobEncoding::new(result_blob.unwrap())
         );
     }
@@ -482,12 +477,7 @@ impl DxcLibrary {
     pub fn get_blob_as_string(&self, blob: &DxcBlobEncoding) -> String {
         let mut blob_utf8 = None;
 
-        unsafe {
-            self.inner.get_blob_as_utf8(
-                blob.inner.get_interface::<IDxcBlob>().unwrap(),
-                &mut blob_utf8,
-            )
-        };
+        unsafe { self.inner.get_blob_as_utf8(&blob.inner, &mut blob_utf8) };
 
         let blob_utf8 = blob_utf8.unwrap();
 
@@ -617,11 +607,8 @@ impl DxcValidator {
         // let mut result = std::ptr::null_mut::<c_void>();
         let mut result = None;
         let result_hr = unsafe {
-            self.inner.validate(
-                blob.inner.get_interface::<IDxcBlob>().unwrap(),
-                DXC_VALIDATOR_FLAGS_IN_PLACE_EDIT,
-                &mut result,
-            )
+            self.inner
+                .validate(&blob.inner, DXC_VALIDATOR_FLAGS_IN_PLACE_EDIT, &mut result)
         };
 
         let result = result.unwrap();
