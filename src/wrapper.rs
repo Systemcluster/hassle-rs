@@ -12,6 +12,7 @@ use libloading::{Library, Symbol};
 use std::cell::RefCell;
 use std::convert::Into;
 use std::ffi::c_void;
+use std::pin::Pin;
 use std::rc::Rc;
 
 #[macro_export]
@@ -187,27 +188,6 @@ impl DxcIncludeHandlerWrapper {
             library.clone(),
         )
     }
-
-    pub fn get_interface<I: Interface>(&self) -> Option<I> {
-        use com::sys::{E_NOINTERFACE, E_POINTER, FAILED};
-        use com::IID;
-        let mut ppv = None;
-        let hr = unsafe {
-            self.query_interface(
-                &I::IID as *const IID,
-                &mut ppv as *mut _ as *mut *mut c_void,
-            )
-        };
-        if FAILED(hr) {
-            assert!(
-                hr == E_NOINTERFACE || hr == E_POINTER,
-                "QueryInterface returned non-standard error"
-            );
-            return None;
-        }
-        debug_assert!(ppv.is_some());
-        ppv
-    }
 }
 
 // use com::sys::{HRESULT, NOERROR};
@@ -281,8 +261,16 @@ impl DxcCompiler {
         let mut dxc_defines = vec![];
         Self::prep_defines(&defines, &mut wide_defines, &mut dxc_defines);
 
-        let handler_wrapper = Self::prep_include_handler(&self.library, include_handler);
-        let h = handler_wrapper.map(|hnd| hnd.get_interface::<IDxcIncludeHandler>().unwrap()).unwrap();
+        let unpinned = Self::prep_include_handler(&self.library, include_handler);
+        dbg!(&unpinned.as_ref().unwrap().__refcnt);
+        let queried: Option<IDxcIncludeHandler> =
+            unpinned.map(|hnd| DxcIncludeHandlerWrapper::allocate(hnd).unwrap());
+        // let pinned = unpinned.map(Pin::new);
+        // dbg!(&pinned.as_ref().unwrap().__refcnt);
+        // dbg!(&pinned.as_ref().unwrap().__0);
+        // let queried = pinned.map(|hnd| hnd.query::<IDxcIncludeHandler>().unwrap());
+        // // dbg!(&pinned.as_ref().unwrap().__refcnt);
+        // dbg!(&queried.as_ref().unwrap().inner);
 
         let mut result = None;
         let result_hr = unsafe {
@@ -295,7 +283,7 @@ impl DxcCompiler {
                 dxc_args.len() as u32,
                 dxc_defines.as_ptr(),
                 dxc_defines.len() as u32,
-                Some(h),
+                queried,
                 &mut result,
             )
         };
@@ -348,7 +336,7 @@ impl DxcCompiler {
                 dxc_args.len() as u32,
                 dxc_defines.as_ptr(),
                 dxc_defines.len() as u32,
-                handler_wrapper.map(|hnd| hnd.get_interface::<IDxcIncludeHandler>().unwrap()),
+                handler_wrapper.map(|hnd| DxcIncludeHandlerWrapper::allocate(hnd).unwrap()),
                 &mut result,
                 &mut debug_filename,
                 &mut debug_blob,
@@ -400,7 +388,7 @@ impl DxcCompiler {
                 dxc_args.len() as u32,
                 dxc_defines.as_ptr(),
                 dxc_defines.len() as u32,
-                handler_wrapper.map(|hnd| hnd.get_interface::<IDxcIncludeHandler>().unwrap()),
+                handler_wrapper.map(|hnd| DxcIncludeHandlerWrapper::allocate(hnd).unwrap()),
                 &mut result,
             )
         };
