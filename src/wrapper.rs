@@ -521,7 +521,7 @@ impl Dxc {
                 &CLSID_DxcCompiler,
                 &IID_IDXC_COMPILER2,
                 // &IDxcCompiler2::IID,
-                &mut compiler, /*  as *mut _ as *mut *mut _ */
+                &mut compiler,
             ),
             DxcCompiler::new(
                 compiler.unwrap(),
@@ -538,7 +538,7 @@ impl Dxc {
                 &CLSID_DxcLibrary,
                 // &IID_IDXC_LIBRARY,
                 &IDxcLibrary::IID,
-                &mut library /*  as *mut _ as *mut *mut _ */
+                &mut library
             ),
             DxcLibrary::new(library.unwrap())
         );
