@@ -181,14 +181,13 @@ impl DxcIncludeHandlerWrapper {
     fn create_include_handler(
         library: &DxcLibrary,
         include_handler: Box<dyn DxcIncludeHandler>,
-    ) -> IDxcIncludeHandler {
+    ) -> Pin<Box<DxcIncludeHandlerWrapper>> {
         Self::allocate(
             include_handler,
             RefCell::new(vec![]),
             RefCell::new(vec![]),
             library.clone(),
         )
-        .unwrap()
     }
 }
 
@@ -239,7 +238,7 @@ impl DxcCompiler {
     fn prep_include_handler(
         library: &DxcLibrary,
         include_handler: Option<Box<dyn DxcIncludeHandler>>,
-    ) -> Option<IDxcIncludeHandler> {
+    ) -> Option<Pin<Box<DxcIncludeHandlerWrapper>>> {
         include_handler.map(|include_handler| {
             DxcIncludeHandlerWrapper::create_include_handler(library, include_handler)
         })
@@ -263,7 +262,12 @@ impl DxcCompiler {
         let mut dxc_defines = vec![];
         Self::prep_defines(&defines, &mut wide_defines, &mut dxc_defines);
 
-        let handler_wrapper = Self::prep_include_handler(&self.library, include_handler);
+        let cls = Self::prep_include_handler(&self.library, include_handler);
+        dbg!(&cls);
+        let handler_wrapper = cls /* .as_ref() */
+            .map(|hnd| hnd.query().unwrap());
+        // dbg!(&cls);
+        dbg!(&handler_wrapper);
 
         let mut result = None;
         let result_hr = unsafe {
@@ -329,7 +333,7 @@ impl DxcCompiler {
                 dxc_args.len() as u32,
                 dxc_defines.as_ptr(),
                 dxc_defines.len() as u32,
-                handler_wrapper,
+                None,
                 &mut result,
                 &mut debug_filename,
                 &mut debug_blob,
@@ -381,7 +385,7 @@ impl DxcCompiler {
                 dxc_args.len() as u32,
                 dxc_defines.as_ptr(),
                 dxc_defines.len() as u32,
-                handler_wrapper,
+                None,
                 &mut result,
             )
         };
