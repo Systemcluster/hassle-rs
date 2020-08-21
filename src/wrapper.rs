@@ -128,14 +128,14 @@ class! {
     }
 
     impl IDxcUnknownShim for DxcIncludeHandlerWrapper {
-        #[cfg(not(windows))]
-        fn complete_object_destructor(&self) -> HRESULT {
-            HRESULT(0)
-        }
-        #[cfg(not(windows))]
-        fn deleting_destructor(&self) -> HRESULT {
-            HRESULT(0)
-        }
+        // #[cfg(not(windows))]
+        // fn complete_object_destructor(&self) -> HRESULT {
+        //     HRESULT(0)
+        // }
+        // #[cfg(not(windows))]
+        // fn deleting_destructor(&self) -> HRESULT {
+        //     HRESULT(0)
+        // }
     }
 
     impl IDxcIncludeHandler for DxcIncludeHandlerWrapper {
