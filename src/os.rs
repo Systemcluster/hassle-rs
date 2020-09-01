@@ -22,6 +22,7 @@ mod os_defs {
 
 pub use os_defs::*;
 
+#[repr(transparent)]
 pub struct HRESULT(pub os_defs::HRESULT);
 impl HRESULT {
     pub fn is_err(&self) -> bool {
