@@ -7,7 +7,7 @@
 use crate::ffi::*;
 use crate::os::{HRESULT, LPCWSTR, LPWSTR, WCHAR};
 use crate::utils::{from_wide, to_wide, HassleError};
-use com::{class, Interface};
+use com::{class, production::ClassAllocation, Interface};
 use libloading::{Library, Symbol};
 use std::cell::RefCell;
 use std::convert::Into;
@@ -177,11 +177,17 @@ impl Default for DxcIncludeHandlerWrapper {
     }
 }
 
+impl std::fmt::Debug for DxcIncludeHandlerWrapper {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DxcIncludeHandlerWrapper").finish()
+    }
+}
+
 impl DxcIncludeHandlerWrapper {
     fn create_include_handler(
         library: &DxcLibrary,
         include_handler: Box<dyn DxcIncludeHandler>,
-    ) -> Pin<Box<DxcIncludeHandlerWrapper>> {
+    ) -> ClassAllocation<DxcIncludeHandlerWrapper> {
         Self::allocate(
             include_handler,
             RefCell::new(vec![]),
@@ -190,8 +196,6 @@ impl DxcIncludeHandlerWrapper {
         )
     }
 }
-
-// use com::sys::{HRESULT, NOERROR};
 
 // #[derive(Debug)]
 pub struct DxcCompiler {
@@ -238,7 +242,7 @@ impl DxcCompiler {
     fn prep_include_handler(
         library: &DxcLibrary,
         include_handler: Option<Box<dyn DxcIncludeHandler>>,
-    ) -> Option<Pin<Box<DxcIncludeHandlerWrapper>>> {
+    ) -> Option<ClassAllocation<DxcIncludeHandlerWrapper>> {
         include_handler.map(|include_handler| {
             DxcIncludeHandlerWrapper::create_include_handler(library, include_handler)
         })
@@ -263,8 +267,8 @@ impl DxcCompiler {
         Self::prep_defines(&defines, &mut wide_defines, &mut dxc_defines);
 
         let cls = Self::prep_include_handler(&self.library, include_handler);
-        dbg!(&cls);
-        let handler_wrapper = cls /* .as_ref() */
+        // dbg!(&cls);
+        let handler_wrapper = cls .as_ref()
             .map(|hnd| hnd.query().unwrap());
         // dbg!(&cls);
         dbg!(&handler_wrapper);
