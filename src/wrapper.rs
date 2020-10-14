@@ -78,7 +78,7 @@ impl DxcBlobEncoding {
 impl Into<DxcBlob> for DxcBlobEncoding {
     fn into(self) -> DxcBlob {
         // TODO: Refcounted ComRc!
-        DxcBlob::new(self.inner.get_interface::<IDxcBlob>().unwrap())
+        DxcBlob::new(self.inner.query_interface::<IDxcBlob>().unwrap())
     }
 }
 
@@ -156,7 +156,7 @@ class! {
                     .create_blob_with_encoding_from_str(&*pinned_source)
                     .unwrap();
 
-                unsafe { *include_source = blob.inner.get_interface::<IDxcBlob>() };
+                unsafe { *include_source = blob.inner.query_interface::<IDxcBlob>() };
                 self.blobs.borrow_mut().push(blob);
                 self.pinned.borrow_mut().push(Rc::clone(&pinned_source));
 
@@ -267,10 +267,7 @@ impl DxcCompiler {
         Self::prep_defines(&defines, &mut wide_defines, &mut dxc_defines);
 
         let cls = Self::prep_include_handler(&self.library, include_handler);
-        // dbg!(&cls);
-        let handler_wrapper = cls .as_ref()
-            .map(|hnd| hnd.query().unwrap());
-        // dbg!(&cls);
+        let handler_wrapper = cls.as_ref().map(|hnd| hnd.query_interface().unwrap());
         dbg!(&handler_wrapper);
 
         let mut result = None;
@@ -577,10 +574,10 @@ impl DxcValidator {
         //     return Err(result_hr);
         // }
 
-        // TODO: Keep above code to get HRESULT? Update get_interface to return a Result<>??
+        // TODO: Keep above code to get HRESULT? Update query_interface to return a Result<>??
         let version = self
             .inner
-            .get_interface::<IDxcVersionInfo>()
+            .query_interface::<IDxcVersionInfo>()
             .ok_or(HRESULT(com::sys::E_NOINTERFACE))?;
 
         let mut major = 0;
