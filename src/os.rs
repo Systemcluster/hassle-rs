@@ -37,6 +37,7 @@ mod os_defs {
 
 pub use os_defs::*;
 
+#[must_use]
 #[repr(transparent)]
 pub struct HRESULT(pub os_defs::HRESULT);
 impl HRESULT {
