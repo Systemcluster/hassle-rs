@@ -16,7 +16,7 @@ use std::rc::Rc;
 macro_rules! check_hr {
     ($hr:expr, $v: expr) => {{
         let hr = $hr;
-        if hr == 0 {
+        if !hr.is_err() {
             Ok($v)
         } else {
             Err(hr)
@@ -27,7 +27,7 @@ macro_rules! check_hr {
 macro_rules! check_hr_wrapped {
     ($hr:expr, $v: expr) => {{
         let hr = $hr;
-        if hr == 0 {
+        if !hr.is_err() {
             Ok($v)
         } else {
             Err(HassleError::Win32Error(hr))
@@ -165,7 +165,7 @@ impl<'a> DxcIncludeHandlerWrapper<'a> {
     }
 
     extern "stdcall" fn dummy(_me: *const com_rs::IUnknown) -> HRESULT {
-        0 // dummy impl
+        0.into() // dummy impl
     }
 
     extern "stdcall" fn load_source(
@@ -199,6 +199,7 @@ impl<'a> DxcIncludeHandlerWrapper<'a> {
         } else {
             -2_147_024_894 // ERROR_FILE_NOT_FOUND / 0x80070002
         }
+        .into()
     }
 }
 
@@ -314,7 +315,7 @@ impl DxcCompiler {
             result.get_status(&mut compile_error);
         }
 
-        if result_hr == 0 && compile_error == 0 {
+        if !result_hr.is_err() && compile_error == 0 {
             Ok(DxcOperationResult::new(result))
         } else {
             Err((DxcOperationResult::new(result), result_hr))
@@ -369,7 +370,7 @@ impl DxcCompiler {
             result.get_status(&mut compile_error);
         }
 
-        if result_hr == 0 && compile_error == 0 {
+        if !result_hr.is_err() && compile_error == 0 {
             Ok((
                 DxcOperationResult::new(result),
                 from_wide(debug_filename),
@@ -419,7 +420,7 @@ impl DxcCompiler {
             result.get_status(&mut compile_error);
         }
 
-        if result_hr == 0 && compile_error == 0 {
+        if !result_hr.is_err() && compile_error == 0 {
             Ok(DxcOperationResult::new(result))
         } else {
             Err((DxcOperationResult::new(result), result_hr))
@@ -579,14 +580,15 @@ impl DxcValidator {
     pub fn version(&self) -> Result<DxcValidatorVersion, HRESULT> {
         let mut version: ComPtr<IDxcVersionInfo> = ComPtr::new();
 
-        let result_hr = unsafe {
-            self.inner
-                .query_interface(&IID_IDxcVersionInfo, version.as_mut_ptr())
-        };
-
-        if result_hr != 0 {
-            return Err(result_hr);
-        }
+        let version = check_hr!(
+            unsafe {
+                HRESULT(
+                    self.inner
+                        .query_interface(&IID_IDxcVersionInfo, version.as_mut_ptr()),
+                )
+            },
+            version
+        )?;
 
         let mut major = 0;
         let mut minor = 0;
@@ -610,7 +612,7 @@ impl DxcValidator {
         let mut validate_status = 0u32;
         unsafe { result.get_status(&mut validate_status) };
 
-        if result_hr == 0 && validate_status == 0 {
+        if !result_hr.is_err() && validate_status == 0 {
             Ok(blob)
         } else {
             Err((DxcOperationResult::new(result), result_hr))
