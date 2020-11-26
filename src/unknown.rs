@@ -1,6 +1,6 @@
 #[cfg(not(windows))]
-use crate::os::HRESULT;
-use com_rs::{com_interface, IUnknown, IID};
+use crate::{check_hr, os::HRESULT};
+use com_rs::{com_interface, ComInterface, ComPtr, IUnknown, IID};
 
 extern "C" {
     static IID_IUnknown: IID;
@@ -37,6 +37,17 @@ com_interface! {
         vtable: IDxcUnknownShimVtbl,
         fn complete_object_destructor() -> HRESULT;
         fn deleting_destructor() -> HRESULT;
+    }
+}
+
+impl IDxcUnknownShim {
+    pub fn query<T: ComInterface>(&self) -> Result<ComPtr<T>, HRESULT> {
+        let mut object: ComPtr<T> = ComPtr::new();
+
+        check_hr!(
+            unsafe { HRESULT(self.query_interface(&T::iid(), object.as_mut_ptr() as *mut _ as _)) },
+            object
+        )
     }
 }
 

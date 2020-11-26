@@ -578,17 +578,7 @@ impl DxcValidator {
     }
 
     pub fn version(&self) -> Result<DxcValidatorVersion, HRESULT> {
-        let mut version: ComPtr<IDxcVersionInfo> = ComPtr::new();
-
-        let version = check_hr!(
-            unsafe {
-                HRESULT(
-                    self.inner
-                        .query_interface(&IID_IDxcVersionInfo, version.as_mut_ptr()),
-                )
-            },
-            version
-        )?;
+        let version: ComPtr<IDxcVersionInfo> = self.inner.query()?;
 
         let mut major = 0;
         let mut minor = 0;
