@@ -9,7 +9,6 @@ use crate::os::{HRESULT, LPCWSTR, LPWSTR, WCHAR};
 use crate::utils::{from_wide, to_wide, HassleError};
 use com_rs::ComPtr;
 use libloading::{Library, Symbol};
-use std::convert::Into;
 use std::ffi::c_void;
 use std::rc::Rc;
 
@@ -89,9 +88,9 @@ impl DxcBlobEncoding {
     }
 }
 
-impl Into<DxcBlob> for DxcBlobEncoding {
-    fn into(self) -> DxcBlob {
-        DxcBlob::new(ComPtr::from(&self.inner))
+impl From<DxcBlobEncoding> for DxcBlob {
+    fn from(encoded_blob: DxcBlobEncoding) -> Self {
+        DxcBlob::new((&encoded_blob.inner).into())
     }
 }
 
