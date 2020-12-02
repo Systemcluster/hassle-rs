@@ -120,23 +120,21 @@ pub fn compile_hlsl(
         args,
         Some(Box::new(DefaultIncludeHandler {})),
         defines,
-    );
+    )?;
 
-    match result {
-        Err(result) => {
-            let error_blob = result
-                .0
-                .get_error_buffer()
-                .map_err(HassleError::Win32Error)?;
-            Err(HassleError::CompileError(
-                library.get_blob_as_string(&error_blob),
-            ))
-        }
-        Ok(result) => {
-            let result_blob = result.get_result().map_err(HassleError::Win32Error)?;
+    if result
+        .get_status()
+        .map_err(HassleError::Win32Error)?
+        .is_err()
+    {
+        let error_blob = result.get_error_buffer().map_err(HassleError::Win32Error)?;
+        Err(HassleError::CompileError(
+            library.get_blob_as_string(&error_blob),
+        ))
+    } else {
+        let result_blob = result.get_result().map_err(HassleError::Win32Error)?;
 
-            Ok(result_blob.to_vec())
-        }
+        Ok(result_blob.to_vec())
     }
 }
 

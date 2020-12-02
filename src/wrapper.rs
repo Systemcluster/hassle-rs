@@ -104,8 +104,8 @@ impl DxcOperationResult {
         Self { inner }
     }
 
-    pub fn get_status(&self) -> Result<u32, HRESULT> {
-        let mut status: u32 = 0;
+    pub fn get_status(&self) -> Result<HRESULT, HRESULT> {
+        let mut status = HRESULT(0);
         check_hr!(unsafe { self.inner.get_status(&mut status) }, status)
     }
 
@@ -281,7 +281,8 @@ impl DxcCompiler {
         args: &[&str],
         include_handler: Option<Box<dyn DxcIncludeHandler>>,
         defines: &[(&str, Option<&str>)],
-    ) -> Result<DxcOperationResult, (DxcOperationResult, HRESULT)> {
+        // ) -> Result<DxcBlob, (HRESULT, DxcBlob)> {
+    ) -> Result<DxcOperationResult, HassleError> {
         let mut wide_args = vec![];
         let mut dxc_args = vec![];
         Self::prep_args(&args, &mut wide_args, &mut dxc_args);
@@ -310,16 +311,46 @@ impl DxcCompiler {
             )
         };
 
-        let mut compile_error = 0u32;
-        unsafe {
-            result.get_status(&mut compile_error);
+        // Should not read pointer
+        // let result = DxcOperationResult::new(result);
+
+        // https://asawicki.info/news_1719_two_shader_compilers_of_direct3d_12
+        // There seems to be no clear description when the result is valid.
+        // Always grab the nearest error (returned value or get_status),
+        // and always check if an error string is available when either
+        // is not S_OK.
+        // (The expectation is that the function returns internal failures,
+        //  and S_OK when `result` is valid. That may then contain compiler
+        //  errors corresponding with get_result()? != S_OK)
+
+        if result.is_null() {
+            Err(HassleError::Win32Error(result_hr))
+        } else {
+            // Caller should extract error from DxcOperationResult
+            Ok(DxcOperationResult::new(result))
         }
 
-        if !result_hr.is_err() && compile_error == 0 {
-            Ok(DxcOperationResult::new(result))
-        } else {
-            Err((DxcOperationResult::new(result), result_hr))
-        }
+        // let result_hr = if result_hr.is_err() {
+        //     result_hr
+        // } else {
+        //     assert!(!result.inner.is_null());
+        //     // If HRESULT is 0 `result` should be a valid pointer
+        //     result.get_status().map_err(HassleError::Win32Error)?
+        // };
+
+        // if result_hr.is_err() {
+        //     if !result.inner.is_null() {
+        //         let error_blob = result.get_error_buffer().map_err(HassleError::Win32Error)?;
+        //     // Err((result_hr, error_blob))
+        //     // Err(HassleError::CompileError(
+        //     //     self.get_blob_as_string(&error_blob),
+        //     // ))
+        //     } else {
+        //         Err(HassleError::Win32Error(result_hr))
+        //     }
+        // } else {
+        //     result.get_result().map_err(HassleError::Win32Error)
+        // }
     }
 
     pub fn compile_with_debug(
@@ -331,7 +362,7 @@ impl DxcCompiler {
         args: &[&str],
         include_handler: Option<Box<dyn DxcIncludeHandler>>,
         defines: &[(&str, Option<&str>)],
-    ) -> Result<(DxcOperationResult, String, DxcBlob), (DxcOperationResult, HRESULT)> {
+    ) -> Result<(DxcOperationResult, String), HassleError> {
         let mut wide_args = vec![];
         let mut dxc_args = vec![];
         Self::prep_args(&args, &mut wide_args, &mut dxc_args);
@@ -365,19 +396,11 @@ impl DxcCompiler {
             )
         };
 
-        let mut compile_error = 0u32;
-        unsafe {
-            result.get_status(&mut compile_error);
-        }
-
-        if !result_hr.is_err() && compile_error == 0 {
-            Ok((
-                DxcOperationResult::new(result),
-                from_wide(debug_filename),
-                DxcBlob::new(debug_blob),
-            ))
+        if result.is_null() {
+            Err(HassleError::Win32Error(result_hr))
         } else {
-            Err((DxcOperationResult::new(result), result_hr))
+            // Caller should extract error from DxcOperationResult
+            Ok((DxcOperationResult::new(result), from_wide(debug_filename)))
         }
     }
 
@@ -388,7 +411,7 @@ impl DxcCompiler {
         args: &[&str],
         include_handler: Option<Box<dyn DxcIncludeHandler>>,
         defines: &[(&str, Option<&str>)],
-    ) -> Result<DxcOperationResult, (DxcOperationResult, HRESULT)> {
+    ) -> Result<DxcOperationResult, HassleError> {
         let mut wide_args = vec![];
         let mut dxc_args = vec![];
         Self::prep_args(&args, &mut wide_args, &mut dxc_args);
@@ -415,15 +438,11 @@ impl DxcCompiler {
             )
         };
 
-        let mut compile_error = 0u32;
-        unsafe {
-            result.get_status(&mut compile_error);
-        }
-
-        if !result_hr.is_err() && compile_error == 0 {
-            Ok(DxcOperationResult::new(result))
+        if result.is_null() {
+            Err(HassleError::Win32Error(result_hr))
         } else {
-            Err((DxcOperationResult::new(result), result_hr))
+            // Caller should extract error from DxcOperationResult
+            Ok(DxcOperationResult::new(result))
         }
     }
 
@@ -599,10 +618,10 @@ impl DxcValidator {
             )
         };
 
-        let mut validate_status = 0u32;
+        let mut validate_status = HRESULT(0);
         unsafe { result.get_status(&mut validate_status) };
 
-        if !result_hr.is_err() && validate_status == 0 {
+        if !result_hr.is_err() && validate_status.is_err() {
             Ok(blob)
         } else {
             Err((DxcOperationResult::new(result), result_hr))

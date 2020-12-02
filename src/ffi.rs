@@ -58,7 +58,7 @@ com_interface! {
     interface IDxcOperationResult: IDxcUnknownShim, IUnknown {
         iid: IID_IDxcOperationResult,
         vtable: IDxcOperationResultVtbl,
-        fn get_status(status: *mut u32) -> HRESULT;
+        fn get_status(status: *mut HRESULT) -> HRESULT;
         fn get_result(result: *mut *mut IDxcBlob) -> HRESULT;
         fn get_error_buffer(errors: *mut *mut IDxcBlobEncoding) -> HRESULT;
     }
