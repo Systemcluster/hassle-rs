@@ -25,7 +25,7 @@ default-target = "x86_64-pc-windows-msvc"
 
 [dependencies]
 libloading = "0.6.2"
-com = { path = "../com-rs", features = ["production"] }
+com = { version = "0.4", features = ["production"] }
 bitflags = "1.2.1"
 widestring = "0.4.2"
 thiserror = "1.0"
