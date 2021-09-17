@@ -488,7 +488,7 @@ fn dxcompiler_lib_name() -> &'static str {
     "dxcompiler.dll"
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "android"))]
 fn dxcompiler_lib_name() -> &'static str {
     "./libdxcompiler.so"
 }
