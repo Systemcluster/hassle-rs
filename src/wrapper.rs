@@ -7,10 +7,10 @@
 use crate::ffi::*;
 use crate::os::{HRESULT, LPCWSTR, LPWSTR, WCHAR};
 use crate::utils::{from_wide, to_wide, HassleError, Result};
-use com_rs::ComPtr;
 use libloading::{Library, Symbol};
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
+use tinycom::ComPtr;
 
 #[derive(Debug)]
 pub struct DxcBlob {
@@ -113,17 +113,18 @@ pub trait DxcIncludeHandler {
 #[repr(C)]
 struct DxcIncludeHandlerWrapperVtbl {
     query_interface: extern "system" fn(
-        *const com_rs::IUnknown,
-        &com_rs::IID,
+        *const tinycom::IUnknown,
+        &tinycom::IID,
         *mut *mut core::ffi::c_void,
-    ) -> HRESULT,
-    add_ref: extern "system" fn(*const com_rs::IUnknown) -> HRESULT,
-    release: extern "system" fn(*const com_rs::IUnknown) -> HRESULT,
+    ) -> tinycom::HResult,
+    add_ref: extern "system" fn(*const tinycom::IUnknown) -> HRESULT,
+    release: extern "system" fn(*const tinycom::IUnknown) -> HRESULT,
     #[cfg(not(windows))]
-    complete_object_destructor: extern "system" fn(*const com_rs::IUnknown) -> HRESULT,
+    complete_object_destructor: extern "system" fn(*const tinycom::IUnknown) -> HRESULT,
     #[cfg(not(windows))]
-    deleting_destructor: extern "system" fn(*const com_rs::IUnknown) -> HRESULT,
-    load_source: extern "system" fn(*mut com_rs::IUnknown, LPCWSTR, *mut *mut IDxcBlob) -> HRESULT,
+    deleting_destructor: extern "system" fn(*const tinycom::IUnknown) -> HRESULT,
+    load_source:
+        extern "system" fn(*mut tinycom::IUnknown, LPCWSTR, *mut *mut IDxcBlob) -> tinycom::HResult,
 }
 
 #[repr(C)]
@@ -136,23 +137,23 @@ struct DxcIncludeHandlerWrapper<'a, 'i> {
 
 impl<'a, 'i> DxcIncludeHandlerWrapper<'a, 'i> {
     extern "system" fn query_interface(
-        _me: *const com_rs::IUnknown,
-        _rrid: &com_rs::IID,
+        _me: *const tinycom::IUnknown,
+        _rrid: &tinycom::IID,
         _ppv_obj: *mut *mut core::ffi::c_void,
-    ) -> HRESULT {
-        HRESULT(0) // dummy impl
+    ) -> tinycom::HResult {
+        0 // dummy impl
     }
 
-    extern "system" fn dummy(_me: *const com_rs::IUnknown) -> HRESULT {
-        HRESULT(0) // dummy impl
+    extern "system" fn dummy(_me: *const tinycom::IUnknown) -> HRESULT {
+        HRESULT::from(0) // dummy impl
     }
 
     extern "system" fn load_source(
-        me: *mut com_rs::IUnknown,
+        me: *mut tinycom::IUnknown,
         filename: LPCWSTR,
         include_source: *mut *mut IDxcBlob,
-    ) -> HRESULT {
-        let me = me.cast::<DxcIncludeHandlerWrapper>();
+    ) -> tinycom::HResult {
+        let me = me as *mut DxcIncludeHandlerWrapper;
 
         let filename = crate::utils::from_wide(filename);
 
@@ -476,7 +477,7 @@ fn dxcompiler_lib_name() -> &'static Path {
 
 #[cfg(any(target_os = "linux", target_os = "android"))]
 fn dxcompiler_lib_name() -> &'static Path {
-    Path::new("./libdxcompiler.so")
+    Path::new(".libdxcompiler.so")
 }
 
 #[cfg(target_os = "macos")]
