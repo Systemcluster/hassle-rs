@@ -477,7 +477,7 @@ fn dxcompiler_lib_name() -> &'static Path {
 
 #[cfg(any(target_os = "linux", target_os = "android"))]
 fn dxcompiler_lib_name() -> &'static Path {
-    Path::new(".libdxcompiler.so")
+    Path::new("libdxcompiler.so")
 }
 
 #[cfg(target_os = "macos")]
